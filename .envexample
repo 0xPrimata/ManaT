@@ -1,0 +1,21 @@
+; WebSocket RPC for your desired EVM chain
+WS=
+; HTTP RPC for your desired EVM chain
+HTTP=
+; If utilizing a test HTTP
+HTTP_TEST=
+WS_ETH=
+HTTP_ETH=
+; blockscan API key. Acquire one if you would like to fetch contract ABIs
+SCAN_API_KEY=
+CONTRACT=
+
+; main wallet not used for minting
+PRIVATE_KEY=
+
+; minter1 
+PRIVATE_KEY1=
+; minter2 
+PRIVATE_KEY2=
+; minter3 
+PRIVATE_KEY3=
