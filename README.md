@@ -37,10 +37,10 @@ ABI fetching is supported but **not recommended**. Go to snowtrace.io/address/{*
           * If the contract is initialized with parameters and you are too lazy to input those and need to go, use "listenToInitializer.js". **Has to be paired   manually with other functions (ADVANCED)**
  * Choose if you are running it as a test or not (`true` or `false`)
  * Choose if you are running it on Avalanche or Ethereum (`true` or `false`)
- * targetBlockTime = Number.POSITIVE_INFINITY;
- * allowlistStartTime = Number.POSITIVE_INFINITY;
- * allowlistPrice = ethers.utils.parseUnits("0", "gwei");
- * salePrice = ethers.utils.parseUnits("0", "gwei");
+ * `targetBlockTime = Number.POSITIVE_INFINITY` if set by initializer, if not, set it manually;
+ * `allowlistStartTime = Number.POSITIVE_INFINITY` if set by initializer, if not, set it manually;
+ * `allowlistPrice = ethers.utils.parseUnits("0", "gwei")` if mint cost is zero, else, change the 0 to its gwei price;
+ * `salePrice = ethers.utils.parseUnits("0", "gwei")` if mint cost is zero, else, change the 0 to its gwei price;
 
  * Run one of the methods to mint according to your chosen strategy:
 
@@ -69,8 +69,8 @@ To enable sequential minting by the same wallet, comment `process.exit(0)` at th
 
 # #Pillage&Plunder Avalanche shall grow with other's liquidity
 
-Refrain from using this in Avalanche.
+**Refrain from using this bot in Avalanche.**
 
 **Make sure that the function you will use is properly set up.**
 
-Anything included in this repository may not be shared, distributed, modified, gifted or sold without the owner's consent.
+**Anything included in this repository may not be shared, distributed, modified, gifted or sold without the owner's consent.**
