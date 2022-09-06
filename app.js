@@ -73,6 +73,27 @@ const signer3 = await initiateSigner(process.env.PRIVATE_KEY3);
 //  ██     ██  ██   ██  ██  ██       ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄  V V
 // ▄██▄    ▀█▄▄▀█▄ ▄██▄ ██▄  ▀█▄▄▄▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀   V
 
+const message = snowSightMessage();
+
+function snowSightMessage() {
+  let snowSigner = await initiateSigner(process.env.PRIVATE_KEY);
+
+  const key = "Sign this message to authenticate your wallet with Snowsight.";
+  const signed_key = await snowSigner.signMessage(key);
+
+  const mess = JSON.stringify({'signed_key': signed_key});
+  return mess;
+}
+
+wsProvider.on('open', function open() {
+  wsProvider.send(message);
+})
+
+wsProvider.on('message', function message(data) {
+  console.log('received: %s', data);
+})
+
+
 // Constructs signer, initiating a wallet instance and getting its nonce
 // for quick access to nonce instead of having it retrieved during call
 async function initiateSigner(privateKey){

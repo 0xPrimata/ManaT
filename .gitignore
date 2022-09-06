@@ -54,6 +54,9 @@ snap/
 .cloud-locale-test.skip
 .profile
 .wget-hsts
+.selected_editor
+
+.local/
 
 .gitconfig
 
