@@ -1,5 +1,4 @@
-
-// _______                                                 __          __       __                            ________ 
+//  _______                                                 __          __       __                            ________ 
 // |       \                                               |  \        |  \     /  \                          |        \
 // | ▓▓▓▓▓▓▓\ ______   ______        __  ______   _______ _| ▓▓_       | ▓▓\   /  ▓▓ ______  _______   ______  \▓▓▓▓▓▓▓▓
 // | ▓▓__/ ▓▓/      \ /      \      |  \/      \ /       \   ▓▓ \      | ▓▓▓\ /  ▓▓▓|      \|       \ |      \   | ▓▓   
@@ -14,17 +13,17 @@
 
 const dotenv = require("dotenv").config();
 const { ethers } = require("ethers");
-const { MerkleTree } = require('merkletreejs');
+const { MerkleTree } = require("merkletreejs");
 const addr = require("./addr.json");
-const abi = require("./abi.json");                                          
+const abi = require("./abi.json");
 
-//                    ▄    ██                          
-//   ▄▄▄   ▄▄▄ ▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄  
-// ▄█  ▀█▄  ██▀  ██  ██    ██  ▄█  ▀█▄  ██  ██  ██▄ ▀  
+//                    ▄    ██
+//   ▄▄▄   ▄▄▄ ▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
+// ▄█  ▀█▄  ██▀  ██  ██    ██  ▄█  ▀█▄  ██  ██  ██▄ ▀
 // ██   ██  ██    █  ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄ V   V
 //  ▀█▄▄█▀  ██▄▄▄▀   ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀  V V
 //          ██                                           V
-//         ▀▀▀▀                                        
+//         ▀▀▀▀
 
 // block produced. Current ethereum block is 15202823 july 24 2022
 let targetBlockNumber = 20000000;
@@ -36,7 +35,7 @@ let allowlistStartTime = Number.POSITIVE_INFINITY;
 let allowlistPrice = ethers.utils.parseUnits("0", "gwei");
 let salePrice = ethers.utils.parseUnits("0", "gwei");
 
-// If function depends on owner wallet to identify if certain tx 
+// If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
 let ownerWallet = "0x...";
 
@@ -45,117 +44,140 @@ let maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
 let maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 let gasLimit = 300000;
 
-const test = true; // if running test mode
-const avalanche = true; // if running on avalanche 
+const test = true; //
+const avalanche = 2; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
 const allowlist = true; // if minting to allowlist
+const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
+const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node
 
 abiFetch ? fetchABI() : console.log("abi has been manually set");
 
 // Initialize providers
-const wsProvider = new ethers.providers.WebSocketProvider(avalanche ? process.env.WS : process.env.WS_ETH);
-const httpProvider = new ethers.providers.JsonRpcProvider(avalanche ? process.env.HTTP : process.env.HTTP_ETH);
+const wsProvider = new ethers.providers.WebSocketProvider(
+  avalanche == 2
+    ? process.env.HH
+    : avalanche
+    ? process.env.WS
+    : process.env.WS_ETH
+);
+const httpProvider = new ethers.providers.JsonRpcProvider(
+  avalanche == 2
+    ? process.env.HH
+    : avalanche
+    ? process.env.HTTP
+    : process.env.HTTP_ETH
+);
 
 // Initialize contract instances
 const wsContract = new ethers.Contract(process.env.CONTRACT, abi, wsProvider);
-const httpContract = new ethers.Contract(process.env.CONTRACT, abi, httpProvider);
+
+const httpContract = new ethers.Contract(
+  process.env.CONTRACT,
+  abi,
+  httpProvider
+);
 
 // Intialize signers. Make sure to also alter the amount of wallets minting in snipe() function
-const signer1 = await initiateSigner(process.env.PRIVATE_KEY1);
-const signer2 = await initiateSigner(process.env.PRIVATE_KEY2);
-const signer3 = await initiateSigner(process.env.PRIVATE_KEY3);
+const signer1 = initiateSigner(process.env.PRIVATE_KEY1);
+const signer2 = initiateSigner(process.env.PRIVATE_KEY2);
+const signer3 = initiateSigner(process.env.PRIVATE_KEY3);
 
+//
+snowsight
+  ? snowSightMessage(snowsightPK)
+  : console.log("snowsight not enabled");
 
-//   ▄▀█▄                             ▄    ██                          
-// ▄██▄   ▄▄▄ ▄▄▄  ▄▄ ▄▄▄     ▄▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄  
+//   ▄▀█▄                             ▄    ██
+// ▄██▄   ▄▄▄ ▄▄▄  ▄▄ ▄▄▄     ▄▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
 //  ██     ██  ██   ██  ██  ▄█   ▀▀  ██    ██  ▄█  ▀█▄  ██  ██  ██▄ ▀  V   V
 //  ██     ██  ██   ██  ██  ██       ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄  V V
 // ▄██▄    ▀█▄▄▀█▄ ▄██▄ ██▄  ▀█▄▄▄▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀   V
 
-const message = snowSightMessage();
-
-function snowSightMessage() {
-  let snowSigner = await initiateSigner(process.env.PRIVATE_KEY);
+async function snowSightMessage(privateKey) {
+  let snowSigner = await initiateSigner(privateKey);
 
   const key = "Sign this message to authenticate your wallet with Snowsight.";
-  const signed_key = await snowSigner.signMessage(key);
+  const signed_key = await snowSigner[0].signMessage(key);
 
-  const mess = JSON.stringify({'signed_key': signed_key});
-  return mess;
+  let message = JSON.stringify({ signed_key: signed_key });
+
+  wsProvider.on("open", function open() {
+    wsProvider.send(message);
+  });
+
+  wsProvider.on("message", function message(data) {
+    console.log("received: %s", data);
+  });
 }
-
-wsProvider.on('open', function open() {
-  wsProvider.send(message);
-})
-
-wsProvider.on('message', function message(data) {
-  console.log('received: %s', data);
-})
-
 
 // Constructs signer, initiating a wallet instance and getting its nonce
 // for quick access to nonce instead of having it retrieved during call
-async function initiateSigner(privateKey){
+async function initiateSigner(privateKey) {
   const wallet = new ethers.Wallet(privateKey, httpProvider);
+  console.log(wallet);
   const nonce = await wallet.getTransactionCount();
-  return [wallet, nonce]
+  console.log(nonce);
+  return [wallet, nonce];
 }
 
 // Actionable mint function
 async function snipe() {
-  console.log("minting"); 
-    let contract = wsOnly ? wsContract : httpContract;
+  console.log("minting");
+  let contract = wsOnly ? wsContract : httpContract;
 
-    if (!test) {
-      const [tx1, tx2, tx3] = await Promise.all([
-        //setup as many wallets as you want
-        // include the same amount of txs
-        // make sure to store&console.log them
-        mint(contract, signer1),
-        mint(contract, signer2),
-        mint(contract, signer3),
-      ]);
-  
-      console.log(await tx1);
-      console.log(await tx2);
-      console.log(await tx3);
-  
-      process.exit(0);
-    } else {
-      // mock mint
-      console.log("ran successfully!");
-      process.exit(0);
-    }
+  if (!test) {
+    const [tx1, tx2, tx3] = await Promise.all([
+      //setup as many wallets as you want
+      // include the same amount of txs
+      // make sure to store&console.log them
+      mint(contract, signer1),
+      mint(contract, signer2),
+      mint(contract, signer3),
+    ]);
+
+    console.log(await tx1);
+    console.log(await tx2);
+    console.log(await tx3);
+
+    process.exit(0);
+  } else {
+    // mock mint
+    console.log("ran successfully!");
+    process.exit(0);
+  }
 }
 // Mint function, constructs the mint call
 async function mint(contract, signer) {
-  const wallet = signer[0]
-  const nonce = signer[1]
+  const wallet = signer[0];
+  const nonce = signer[1];
   let options = {
     maxFeePerGas: maxFeePerGas,
     maxPriorityFeePerGas: maxPriorityFeePerGas,
     value: allowlist ? allowlistPrice : salePrice,
     gasLimit: gasLimit,
-    nonce: nonce
+    nonce: nonce,
   };
   // if it requires parsing a signature, make sure to include it as a param
   // e.g. mintMethod(amount, parseSignature(signer[0].address), options)
-  allowlist ? contract.connect(wallet).allowlistMint(amount, options)
-            : contract.connect(wallet).publicSaleMint(amount, options)
+  allowlist
+    ? contract.connect(wallet).allowlistMint(amount, options)
+    : contract.connect(wallet).publicSaleMint(amount, options);
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
 async function blockTimeListener() {
   wsProvider.on("block", function (block) {
     let time = Date.now();
-    allowlist ? console.log(allowlistStartTime, "allowlist") :
-                console.log(publicSaleStartTime, "publicSale");
+    allowlist
+      ? console.log(allowlistStartTime, "allowlist")
+      : console.log(publicSaleStartTime, "publicSale");
     console.log(time / 1000, "current time");
 
     // targetBlockTIme - 1 (will send tx 1 second before tx is actually good) if you have a lot of latency
     targetBlockTime = allowlist ? allowlistStartTime : publicSaleStartTime;
-    if (targetBlockTime <= block.timestamp / 1000) {
+    if (targetBlockTime <= time / 1000) {
       console.log("going to mint");
       snipe();
     } else {
@@ -199,7 +221,7 @@ async function pendingTxListener() {
       if (
         txInfo.data.indexOf("0xee1cc944") !== -1 &&
         txInfo.from.toLowerCase() ==
-        // set to owner / manager wallet that has initialized contract. Watch if ownership is transferred
+          // set to owner / manager wallet that has initialized contract. Watch if ownership is transferred
           ownerWallet.toLowerCase()
       ) {
         console.log(txInfo);
@@ -231,7 +253,6 @@ async function listenToInitializer() {
       _allowlistPrice,
       _salePrice
     ) => {
-
       allowlistStartTime = _allowlistStartTime;
       publicSaleStartTime = _publicSaleStartTime;
       allowlistPrice = _allowlistPrice;
@@ -243,8 +264,10 @@ async function listenToInitializer() {
         _allowlistPrice,
         _salePrice
       );
-    const estimatedTime = allowlist ? allowlistStartTime : publicSaleStartTime - Date.now();
-    setTimeout(snipe(), estimatedTime);
+      const estimatedTime = allowlist
+        ? allowlistStartTime - Date.now()
+        : publicSaleStartTime - Date.now();
+      setTimeout(snipe(), estimatedTime);
     }
   );
 }
@@ -253,26 +276,29 @@ async function listenToInitializer() {
 // parse wallet object, not wallet address
 async function parseSignature(address) {
   // generate Leaf Nodes
-  const leaftNodes = addr.map(address => ethers.utils.keccak256(address));
+  const leaftNodes = addr.map((address) => ethers.utils.keccak256(address));
   // Generate a Tree
-  const tree = new MerkleTree(leaftNodes, ethers.utils.keccak256, {sortPairs: true});
+  const tree = new MerkleTree(leaftNodes, ethers.utils.keccak256, {
+    sortPairs: true,
+  });
 
-  const buf2hex = x => "0x" + x.toString("hex");
+  const buf2hex = (x) => "0x" + x.toString("hex");
 
-  const rootHash = tree.getHexRoot()
-  console.log('rootHash', rootHash)
+  const rootHash = tree.getHexRoot();
+  console.log("rootHash", rootHash);
 
-  const leaf = ethers.utils.keccak256(address)
-  const proof = tree.getProof(leaf).map(x => buf2hex(x.data))
-  return proof
+  const leaf = ethers.utils.keccak256(address);
+  const proof = tree.getProof(leaf).map((x) => buf2hex(x.data));
+  return proof;
 }
 
 async function fetchABI() {
   const response = await fetch(
     `https://api.${
-      avalanche ? 'snowtrace' : 'etherscan'
+      avalanche ? "snowtrace" : "etherscan"
     }.io/api?module=contract&action=getabi&address=${
-      process.env.CONTRACT}&apikey=${process.env.ETHERSCAN_API_KEY}`,
+      process.env.CONTRACT
+    }&apikey=${process.env.ETHERSCAN_API_KEY}`,
     { method: "GET" }
   );
 
@@ -290,4 +316,4 @@ module.exports = {
   pendingTxListener: pendingTxListener,
   eventListener: eventListener,
   listenToInitializer: listenToInitializer,
-}
+};
