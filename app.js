@@ -33,7 +33,7 @@ let targetBlockNumber = 20000000;
 let targetBlockTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
 let allowlistPrice = ethers.utils.parseUnits("0", "gwei");
-let salePrice = ethers.utils.parseUnits("0", "gwei");
+let salePrice = ethers.utils.parseUnits("1", "ether");
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
@@ -44,11 +44,11 @@ let maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
 let maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 let gasLimit = 300000;
 
-const test = true; //
-const avalanche = 2; // 0 false, 1 true, 2 hardhat, 3 snowsight
+const test = false; //
+const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
-const allowlist = true; // if minting to allowlist
+const allowlist = false; // if minting to allowlist
 const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
 const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node
 
@@ -81,8 +81,8 @@ const httpContract = new ethers.Contract(
 
 // Intialize signers. Make sure to also alter the amount of wallets minting in snipe() function
 const signer1 = initiateSigner(process.env.PRIVATE_KEY1);
-const signer2 = initiateSigner(process.env.PRIVATE_KEY2);
-const signer3 = initiateSigner(process.env.PRIVATE_KEY3);
+// const signer2 = initiateSigner(process.env.PRIVATE_KEY2);
+// const signer3 = initiateSigner(process.env.PRIVATE_KEY3);
 
 //
 snowsight
@@ -133,13 +133,13 @@ async function snipe() {
       // include the same amount of txs
       // make sure to store&console.log them
       mint(contract, signer1),
-      mint(contract, signer2),
-      mint(contract, signer3),
+      // mint(contract, signer2),
+      // mint(contract, signer3),
     ]);
 
     console.log(await tx1);
-    console.log(await tx2);
-    console.log(await tx3);
+    // console.log(await tx2);
+    // console.log(await tx3);
 
     process.exit(0);
   } else {
@@ -164,6 +164,13 @@ async function mint(contract, signer) {
   allowlist
     ? contract.connect(wallet).allowlistMint(amount, options)
     : contract.connect(wallet).publicSaleMint(amount, options);
+}
+
+async function preSetTime() {
+  const estimatedTime = allowlist
+        ? allowlistStartTime - Date.now()
+        : publicSaleStartTime - Date.now();
+      setTimeout(snipe(), estimatedTime);
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
@@ -310,6 +317,7 @@ async function fetchABI() {
 }
 
 module.exports = {
+  preSetTime: preSetTime,
   blockTimeListener: blockTimeListener,
   blockNumberListener: blockNumberListener,
   stateContractListener: stateContractListener,
