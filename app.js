@@ -30,10 +30,11 @@ let targetBlockNumber = 20000000;
 
 // blocktime is expressed in unix / 1000 https://www.epochconverter.com/
 // initiate with Number.POSITIVE_INFINITY if listening to initializer
-let targetBlockTime = Number.POSITIVE_INFINITY;
+let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
-let allowlistPrice = ethers.utils.parseUnits("0", "gwei");
-let salePrice = ethers.utils.parseUnits("1", "ether");
+let allowlistPrice = ethers.utils.parseUnits("0", "gwei"); // allowlist sale price
+let salePrice = ethers.utils.parseUnits("0", "ether"); // public sale price
+let amount = 1; // amount per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
@@ -44,7 +45,7 @@ let maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
 let maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 let gasLimit = 300000;
 
-const test = false; //
+const test = true; //
 const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
@@ -112,6 +113,10 @@ async function snowSightMessage(privateKey) {
   });
 }
 
+function pingRPC() {
+
+}
+
 // Constructs signer, initiating a wallet instance and getting its nonce
 // for quick access to nonce instead of having it retrieved during call
 async function initiateSigner(privateKey) {
@@ -128,7 +133,7 @@ async function snipe() {
   let contract = wsOnly ? wsContract : httpContract;
 
   if (!test) {
-    const [tx1, tx2, tx3] = await Promise.all([
+    const [tx1 /**, tx2, tx3 */] = await Promise.all([
       //setup as many wallets as you want
       // include the same amount of txs
       // make sure to store&console.log them
@@ -166,11 +171,14 @@ async function mint(contract, signer) {
     : contract.connect(wallet).publicSaleMint(amount, options);
 }
 
-async function preSetTime() {
+async function presetTime() {
   const estimatedTime = allowlist
-        ? allowlistStartTime - Date.now()
-        : publicSaleStartTime - Date.now();
-      setTimeout(snipe(), estimatedTime);
+        ? allowlistStartTime * 1000 - Date.now()
+        : publicSaleStartTime * 1000 - Date.now();
+  console.log(estimatedTime);
+  console.log(publicSaleStartTime);
+  console.log(Date.now())
+      setTimeout(function(){snipe()}, estimatedTime - 1);
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
@@ -317,7 +325,7 @@ async function fetchABI() {
 }
 
 module.exports = {
-  preSetTime: preSetTime,
+  presetTime: presetTime,
   blockTimeListener: blockTimeListener,
   blockNumberListener: blockNumberListener,
   stateContractListener: stateContractListener,

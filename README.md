@@ -30,7 +30,7 @@ ABI fetching is supported but **not recommended**. Go to snowtrace.io/address/{*
    * Check out how many inputs the function has. Use those to the calls in app.js in the correct order and correct types (strings must be in quotes as an example)
    * Check out how the contract starts the mint.
           * Search for events that will be called when mint opens. If so, use "eventListener.js". **Specify the current event it listens for.**
-          * Look for time variables. If so, use "blockTimeListener.js". **Input the blockTime you want the bot to mint at.**
+          * Look for time variables. If so, use "presetTime.js" or "blockTimeListener.js" your latency and assurance. **Input the blockTime you want the bot to mint at.**
           * Is mint dependent on block number? If so, use "blockNumberListener.js". **Input the blockNumber you want the bot to mint at.**
           * Look for a function that the owner only is allowed to call and will initialize the minting. If so, use "pendingTxListener.js". **Input it as the listened function.**
           * Look for a public variable that says if minting is open/closed paused/unpaused. If so, use "stateContractListener.js". **Specify the variable you are reading on every block.**
@@ -43,7 +43,8 @@ ABI fetching is supported but **not recommended**. Go to snowtrace.io/address/{*
  * `salePrice = ethers.utils.parseUnits("0", "gwei")` if mint cost is zero, else, change the 0 to its gwei price;
 
  * Run one of the methods to mint according to your chosen strategy:
-
+       
+        node presetTime.js
         node blockTimeListener.js
         node eventListener.js
         node pendingTxListener.js
