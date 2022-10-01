@@ -30,10 +30,10 @@ let targetBlockNumber = 20000000;
 
 // blocktime is expressed in unix / 1000 https://www.epochconverter.com/
 // initiate with Number.POSITIVE_INFINITY if listening to initializer
-let publicSaleStartTime = Number.POSITIVE_INFINITY;
+let publicSaleStartTime = Date.now() + 3000;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
-let allowlistPrice = ethers.utils.parseUnits("0", "gwei"); // allowlist sale price
-let salePrice = ethers.utils.parseUnits("0", "ether"); // public sale price
+let allowlistPrice = ethers.utils.parseUnits("1000000000", "gwei"); // allowlist sale price
+let salePrice = ethers.utils.parseUnits("0", "gwei"); // public sale price
 let amount = 1; // amount per tx
 
 // If function depends on owner wallet to identify if certain tx
@@ -82,8 +82,9 @@ const httpContract = new ethers.Contract(
 
 // Intialize signers. Make sure to also alter the amount of wallets minting in snipe() function
 const signer1 = initiateSigner(process.env.PRIVATE_KEY1);
-// const signer2 = initiateSigner(process.env.PRIVATE_KEY2);
-// const signer3 = initiateSigner(process.env.PRIVATE_KEY3);
+// let signer2 = initiateSigner(process.env.PRIVATE_KEY2);
+// let signer3 = initiateSigner(process.env.PRIVATE_KEY3);
+
 
 //
 snowsight
@@ -120,20 +121,21 @@ function pingRPC() {
 // Constructs signer, initiating a wallet instance and getting its nonce
 // for quick access to nonce instead of having it retrieved during call
 async function initiateSigner(privateKey) {
-  const wallet = new ethers.Wallet(privateKey, httpProvider);
-  console.log(wallet);
-  const nonce = await wallet.getTransactionCount();
-  console.log(nonce);
-  return [wallet, nonce];
+  let signer = [null, null];
+  signer[0] = new ethers.Wallet(privateKey, httpProvider);
+  signer[1] = await signer[0].getTransactionCount();
+  console.log("initiateSigner", signer[0])
+  return signer;
 }
 
 // Actionable mint function
 async function snipe() {
   console.log("minting");
   let contract = wsOnly ? wsContract : httpContract;
-
+  console.log("wallet", signer1[0]);
+  console.log("nonce", signer1[1]);
   if (!test) {
-    const [tx1 /**, tx2, tx3 */] = await Promise.all([
+    const [tx1 /*, tx2, tx3*/] = await Promise.all([
       //setup as many wallets as you want
       // include the same amount of txs
       // make sure to store&console.log them
@@ -146,11 +148,9 @@ async function snipe() {
     // console.log(await tx2);
     // console.log(await tx3);
 
-    process.exit(0);
   } else {
     // mock mint
     console.log("ran successfully!");
-    process.exit(0);
   }
 }
 // Mint function, constructs the mint call
@@ -172,13 +172,21 @@ async function mint(contract, signer) {
 }
 
 async function presetTime() {
+  // allowlistStartTime = await httpContract.allowlistStartTime();
+  // allowlistStartTime = allowlistStartTime.toNumber();
+  // publicSaleStartTime = await httpContract.publicSaleStartTime();
+  // publicSaleStartTime = publicSaleStartTime.toNumber();
   const estimatedTime = allowlist
         ? allowlistStartTime * 1000 - Date.now()
         : publicSaleStartTime * 1000 - Date.now();
-  console.log(estimatedTime);
-  console.log(publicSaleStartTime);
-  console.log(Date.now())
-      setTimeout(function(){snipe()}, estimatedTime - 1);
+  
+  console.log("estimated time:", estimatedTime);
+  console.log("allowlist time:", allowlistStartTime);
+  console.log("public sale time:", publicSaleStartTime);
+  console.log("now:", Date.now() / 1000);
+      setTimeout(function(){
+        snipe()
+      }, estimatedTime);
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
@@ -323,6 +331,15 @@ async function fetchABI() {
   const data = await response.json();
   abi = data;
 }
+
+//                                            ▄   
+//   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄  
+// ▄█▄▄▄██  ▀█▄▄▀   ██▀  ██ ▄█  ▀█▄  ██▀ ▀▀  ██   
+// ██        ▄█▄    ██    █ ██   ██  ██      ██   
+//  ▀█▄▄▄▀ ▄█  ██▄  ██▄▄▄▀   ▀█▄▄█▀ ▄██▄     ▀█▄▀ 
+//                  ██                            
+//                 ▀▀▀▀                           
+
 
 module.exports = {
   presetTime: presetTime,
