@@ -1,28 +1,29 @@
-//  _______                                                 __          __       __                            ________ 
+//  _______                                                 __          __       __                            ________
 // |       \                                               |  \        |  \     /  \                          |        \
 // | ▓▓▓▓▓▓▓\ ______   ______        __  ______   _______ _| ▓▓_       | ▓▓\   /  ▓▓ ______  _______   ______  \▓▓▓▓▓▓▓▓
-// | ▓▓__/ ▓▓/      \ /      \      |  \/      \ /       \   ▓▓ \      | ▓▓▓\ /  ▓▓▓|      \|       \ |      \   | ▓▓   
-// | ▓▓    ▓▓  ▓▓▓▓▓▓\  ▓▓▓▓▓▓\      \▓▓  ▓▓▓▓▓▓\  ▓▓▓▓▓▓▓\▓▓▓▓▓▓      | ▓▓▓▓\  ▓▓▓▓ \▓▓▓▓▓▓\ ▓▓▓▓▓▓▓\ \▓▓▓▓▓▓\  | ▓▓   
-// | ▓▓▓▓▓▓▓| ▓▓   \▓▓ ▓▓  | ▓▓     |  \ ▓▓    ▓▓ ▓▓       | ▓▓ __     | ▓▓\▓▓ ▓▓ ▓▓/      ▓▓ ▓▓  | ▓▓/      ▓▓  | ▓▓   
-// | ▓▓     | ▓▓     | ▓▓__/ ▓▓     | ▓▓ ▓▓▓▓▓▓▓▓ ▓▓_____  | ▓▓|  \    | ▓▓ \▓▓▓| ▓▓  ▓▓▓▓▓▓▓ ▓▓  | ▓▓  ▓▓▓▓▓▓▓  | ▓▓   
-// | ▓▓     | ▓▓      \▓▓    ▓▓     | ▓▓\▓▓     \\▓▓     \  \▓▓  ▓▓    | ▓▓  \▓ | ▓▓\▓▓    ▓▓ ▓▓  | ▓▓\▓▓    ▓▓  | ▓▓   
-//  \▓▓      \▓▓       \▓▓▓▓▓▓ __   | ▓▓ \▓▓▓▓▓▓▓ \▓▓▓▓▓▓▓   \▓▓▓▓      \▓▓      \▓▓ \▓▓▓▓▓▓▓\▓▓   \▓▓ \▓▓▓▓▓▓▓   \▓▓   
-//                            |  \__/ ▓▓                                                                                
-//                             \▓▓    ▓▓                                                                                
-//                              \▓▓▓▓▓▓                                                                                 
+// | ▓▓__/ ▓▓/      \ /      \      |  \/      \ /       \   ▓▓ \      | ▓▓▓\ /  ▓▓▓|      \|       \ |      \   | ▓▓
+// | ▓▓    ▓▓  ▓▓▓▓▓▓\  ▓▓▓▓▓▓\      \▓▓  ▓▓▓▓▓▓\  ▓▓▓▓▓▓▓\▓▓▓▓▓▓      | ▓▓▓▓\  ▓▓▓▓ \▓▓▓▓▓▓\ ▓▓▓▓▓▓▓\ \▓▓▓▓▓▓\  | ▓▓
+// | ▓▓▓▓▓▓▓| ▓▓   \▓▓ ▓▓  | ▓▓     |  \ ▓▓    ▓▓ ▓▓       | ▓▓ __     | ▓▓\▓▓ ▓▓ ▓▓/      ▓▓ ▓▓  | ▓▓/      ▓▓  | ▓▓
+// | ▓▓     | ▓▓     | ▓▓__/ ▓▓     | ▓▓ ▓▓▓▓▓▓▓▓ ▓▓_____  | ▓▓|  \    | ▓▓ \▓▓▓| ▓▓  ▓▓▓▓▓▓▓ ▓▓  | ▓▓  ▓▓▓▓▓▓▓  | ▓▓
+// | ▓▓     | ▓▓      \▓▓    ▓▓     | ▓▓\▓▓     \\▓▓     \  \▓▓  ▓▓    | ▓▓  \▓ | ▓▓\▓▓    ▓▓ ▓▓  | ▓▓\▓▓    ▓▓  | ▓▓
+//  \▓▓      \▓▓       \▓▓▓▓▓▓ __   | ▓▓ \▓▓▓▓▓▓▓ \▓▓▓▓▓▓▓   \▓▓▓▓      \▓▓      \▓▓ \▓▓▓▓▓▓▓\▓▓   \▓▓ \▓▓▓▓▓▓▓   \▓▓
+//                            |  \__/ ▓▓
+//                             \▓▓    ▓▓
+//                              \▓▓▓▓▓▓
 
 const dotenv = require("dotenv").config();
 const { ethers } = require("ethers");
-const { MerkleTree } = require("merkletreejs");
-const addr = require("./addr.json");
 const abi = require("./abi.json");
+const parseSignature = require("./utils/parseSignature.js");
+const fetchABI = require("./utils/fetchABI.js");
+const { checkResultErrors } = require("ethers/lib/utils");
 
 //                    ▄    ██
 //   ▄▄▄   ▄▄▄ ▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
 // ▄█  ▀█▄  ██▀  ██  ██    ██  ▄█  ▀█▄  ██  ██  ██▄ ▀
-// ██   ██  ██    █  ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄ V   V
-//  ▀█▄▄█▀  ██▄▄▄▀   ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀  V V
-//          ██                                           V
+// ██   ██  ██    █  ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄
+//  ▀█▄▄█▀  ██▄▄▄▀   ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀  ↓
+//          ██
 //         ▀▀▀▀
 
 // block produced. Current ethereum block is 15202823 july 24 2022
@@ -30,42 +31,43 @@ let targetBlockNumber = 20000000;
 
 // blocktime is expressed in unix / 1000 https://www.epochconverter.com/
 // initiate with Number.POSITIVE_INFINITY if listening to initializer
-let publicSaleStartTime = Date.now() + 3000;
+let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
-let allowlistPrice = ethers.utils.parseUnits("1000000000", "gwei"); // allowlist sale price
-let salePrice = ethers.utils.parseUnits("0", "gwei"); // public sale price
-let amount = 1; // amount per tx
+let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
+let salePrice = ethers.utils.parseEther("0.0"); // public sale price
+const amount = 1; // amount per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
-let ownerWallet = "0x...";
+const ownerWallet = "0x";
 
 // These options must be set manually
-let maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
-let maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
-let gasLimit = 300000;
+const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
+const gasLimit = 300000;
 
-const test = true; //
-const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
+const test = true; //set to false if using hardhat
+const avalanche = 2; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
 const allowlist = false; // if minting to allowlist
-const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
+const requiresSignature = false;
+const snowsightPK = process.env.PRIVATE_KEY; // wallet use to pay for snowsight usage
 const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node
 
-abiFetch ? fetchABI() : console.log("abi has been manually set");
+abiFetch ? fetchABI(avalanche) : console.log("abi has been manually set");
 
 // Initialize providers
 const wsProvider = new ethers.providers.WebSocketProvider(
   avalanche == 2
-    ? process.env.HH
+    ? process.env.WS_HH
     : avalanche
     ? process.env.WS
     : process.env.WS_ETH
 );
 const httpProvider = new ethers.providers.JsonRpcProvider(
   avalanche == 2
-    ? process.env.HH
+    ? process.env.HTTP_HH
     : avalanche
     ? process.env.HTTP
     : process.env.HTTP_ETH
@@ -75,16 +77,18 @@ const httpProvider = new ethers.providers.JsonRpcProvider(
 const wsContract = new ethers.Contract(process.env.CONTRACT, abi, wsProvider);
 
 const httpContract = new ethers.Contract(
-  process.env.CONTRACT,
+  avalanche == 2 ? process.env.HH_CONTRACT : process.env.CONTRACT,
   abi,
   httpProvider
 );
 
-// Intialize signers. Make sure to also alter the amount of wallets minting in snipe() function
-const signer1 = initiateSigner(process.env.PRIVATE_KEY1);
-// let signer2 = initiateSigner(process.env.PRIVATE_KEY2);
-// let signer3 = initiateSigner(process.env.PRIVATE_KEY3);
-
+// Instantiate wallets. Parse in all private keys you want to use
+let wallets = [];
+instantiateWallets([
+  process.env.PRIVATE_KEY1,
+  process.env.PRIVATE_KEY2,
+  process.env.PRIVATE_KEY3,
+]);
 
 //
 snowsight
@@ -93,9 +97,9 @@ snowsight
 
 //   ▄▀█▄                             ▄    ██
 // ▄██▄   ▄▄▄ ▄▄▄  ▄▄ ▄▄▄     ▄▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
-//  ██     ██  ██   ██  ██  ▄█   ▀▀  ██    ██  ▄█  ▀█▄  ██  ██  ██▄ ▀  V   V
-//  ██     ██  ██   ██  ██  ██       ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄  V V
-// ▄██▄    ▀█▄▄▀█▄ ▄██▄ ██▄  ▀█▄▄▄▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀   V
+//  ██     ██  ██   ██  ██  ▄█   ▀▀  ██    ██  ▄█  ▀█▄  ██  ██  ██▄ ▀
+//  ██     ██  ██   ██  ██  ██       ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄
+// ▄██▄    ▀█▄▄▀█▄ ▄██▄ ██▄  ▀█▄▄▄▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀  ↓
 
 async function snowSightMessage(privateKey) {
   let snowSigner = await initiateSigner(privateKey);
@@ -114,8 +118,12 @@ async function snowSightMessage(privateKey) {
   });
 }
 
-function pingRPC() {
-
+async function instantiateWallets(privateKeys) {
+  const promises = privateKeys.map(async (privateKey) => {
+    const wallet = await initiateSigner(privateKey);
+    wallets.push(wallet);
+  });
+  await Promise.all(promises);
 }
 
 // Constructs signer, initiating a wallet instance and getting its nonce
@@ -124,7 +132,6 @@ async function initiateSigner(privateKey) {
   let signer = [null, null];
   signer[0] = new ethers.Wallet(privateKey, httpProvider);
   signer[1] = await signer[0].getTransactionCount();
-  console.log("initiateSigner", signer[0])
   return signer;
 }
 
@@ -132,31 +139,29 @@ async function initiateSigner(privateKey) {
 async function snipe() {
   console.log("minting");
   let contract = wsOnly ? wsContract : httpContract;
-  console.log("wallet", signer1[0]);
-  console.log("nonce", signer1[1]);
   if (!test) {
-    const [tx1 /*, tx2, tx3*/] = await Promise.all([
-      //setup as many wallets as you want
-      // include the same amount of txs
-      // make sure to store&console.log them
-      mint(contract, signer1),
-      // mint(contract, signer2),
-      // mint(contract, signer3),
-    ]);
-
-    console.log(await tx1);
-    // console.log(await tx2);
-    // console.log(await tx3);
-
+    // mock mint
+    let mints = wallets.map(async (wallet) => {
+      mint(contract, wallet);
+    });
+    await Promise.all(mints);
+    console.log("mint ran successfully!");
   } else {
     // mock mint
-    console.log("ran successfully!");
+    let mints = wallets.map(async (wallet) => {
+      const [w, nonce] = wallet;
+      console.log("w", w);
+      console.log("n", nonce);
+    });
+    await Promise.all(mints);
+    console.log("mock mint ran successfully!");
   }
 }
 // Mint function, constructs the mint call
-async function mint(contract, signer) {
-  const wallet = signer[0];
-  const nonce = signer[1];
+async function mint(contract, wallet) {
+  const [signer, nonce] = wallet;
+  console.log("signer", signer);
+  console.log("nonce", nonce);
   let options = {
     maxFeePerGas: maxFeePerGas,
     maxPriorityFeePerGas: maxPriorityFeePerGas,
@@ -165,28 +170,39 @@ async function mint(contract, signer) {
     nonce: nonce,
   };
   // if it requires parsing a signature, make sure to include it as a param
-  // e.g. mintMethod(amount, parseSignature(signer[0].address), options)
-  allowlist
-    ? contract.connect(wallet).allowlistMint(amount, options)
-    : contract.connect(wallet).publicSaleMint(amount, options);
+  if (requiresSignature) {
+    allowlist
+      ? contract
+          .connect(signer)
+          .allowlistMint(amount, parseSignature(signer.address), options)
+      : contract
+          .connect(signer)
+          .publicSaleMint(amount, parseSignature(signer.address), options);
+  } else {
+    allowlist
+      ? contract.connect(signer).allowlistMint(amount, options)
+      : contract.connect(signer).publicSaleMint(amount, options);
+  }
 }
 
 async function presetTime() {
-  // allowlistStartTime = await httpContract.allowlistStartTime();
-  // allowlistStartTime = allowlistStartTime.toNumber();
-  // publicSaleStartTime = await httpContract.publicSaleStartTime();
-  // publicSaleStartTime = publicSaleStartTime.toNumber();
+  allowlistStartTime = await httpContract.allowlistStartTime();
+  allowlistStartTime = allowlistStartTime.toNumber();
+  publicSaleStartTime = await httpContract.publicSaleStartTime();
+  publicSaleStartTime = publicSaleStartTime.toNumber();
+  allowlistPrice = await httpContract.allowlistPrice();
+  salePrice = await httpContract.salePrice();
   const estimatedTime = allowlist
-        ? allowlistStartTime * 1000 - Date.now()
-        : publicSaleStartTime * 1000 - Date.now();
-  
+    ? allowlistStartTime * 1000 - Date.now()
+    : publicSaleStartTime * 1000 - Date.now();
+
   console.log("estimated time:", estimatedTime);
   console.log("allowlist time:", allowlistStartTime);
   console.log("public sale time:", publicSaleStartTime);
   console.log("now:", Date.now() / 1000);
-      setTimeout(function(){
-        snipe()
-      }, estimatedTime);
+  setTimeout(function () {
+    snipe();
+  }, estimatedTime);
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
@@ -266,7 +282,7 @@ async function eventListener() {
 
 // listen to contract Initialize event altering states and act accordingly
 // pair this with blocktime listener
-async function listenToInitializer() {
+async function initializer() {
   wsContract.once(
     "Initialized",
     // passed parameters that initialize sales
@@ -276,6 +292,7 @@ async function listenToInitializer() {
       _allowlistPrice,
       _salePrice
     ) => {
+      console.log("Initialized");
       allowlistStartTime = _allowlistStartTime;
       publicSaleStartTime = _publicSaleStartTime;
       allowlistPrice = _allowlistPrice;
@@ -288,58 +305,20 @@ async function listenToInitializer() {
         _salePrice
       );
       const estimatedTime = allowlist
-        ? allowlistStartTime - Date.now()
-        : publicSaleStartTime - Date.now();
+        ? allowlistStartTime * 1000 - Date.now()
+        : publicSaleStartTime * 1000 - Date.now();
       setTimeout(snipe(), estimatedTime);
     }
   );
 }
 
-// generate signature proof
-// parse wallet object, not wallet address
-async function parseSignature(address) {
-  // generate Leaf Nodes
-  const leaftNodes = addr.map((address) => ethers.utils.keccak256(address));
-  // Generate a Tree
-  const tree = new MerkleTree(leaftNodes, ethers.utils.keccak256, {
-    sortPairs: true,
-  });
-
-  const buf2hex = (x) => "0x" + x.toString("hex");
-
-  const rootHash = tree.getHexRoot();
-  console.log("rootHash", rootHash);
-
-  const leaf = ethers.utils.keccak256(address);
-  const proof = tree.getProof(leaf).map((x) => buf2hex(x.data));
-  return proof;
-}
-
-async function fetchABI() {
-  const response = await fetch(
-    `https://api.${
-      avalanche ? "snowtrace" : "etherscan"
-    }.io/api?module=contract&action=getabi&address=${
-      process.env.CONTRACT
-    }&apikey=${process.env.ETHERSCAN_API_KEY}`,
-    { method: "GET" }
-  );
-
-  if (!response.ok) {
-    throw new Error(`unable to fetch abi`);
-  }
-  const data = await response.json();
-  abi = data;
-}
-
-//                                            ▄   
-//   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄  
-// ▄█▄▄▄██  ▀█▄▄▀   ██▀  ██ ▄█  ▀█▄  ██▀ ▀▀  ██   
-// ██        ▄█▄    ██    █ ██   ██  ██      ██   
-//  ▀█▄▄▄▀ ▄█  ██▄  ██▄▄▄▀   ▀█▄▄█▀ ▄██▄     ▀█▄▀ 
-//                  ██                            
-//                 ▀▀▀▀                           
-
+//                                            ▄
+//   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄
+// ▄█▄▄▄██  ▀█▄▄▀   ██▀  ██ ▄█  ▀█▄  ██▀ ▀▀  ██
+// ██        ▄█▄    ██    █ ██   ██  ██      ██
+//  ▀█▄▄▄▀ ▄█  ██▄  ██▄▄▄▀   ▀█▄▄█▀ ▄██▄     ▀█▄▀ ↓
+//                  ██
+//                 ▀▀▀▀
 
 module.exports = {
   presetTime: presetTime,
@@ -348,5 +327,5 @@ module.exports = {
   stateContractListener: stateContractListener,
   pendingTxListener: pendingTxListener,
   eventListener: eventListener,
-  listenToInitializer: listenToInitializer,
+  initializer: initializer,
 };

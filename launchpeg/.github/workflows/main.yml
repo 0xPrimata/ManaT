@@ -1,0 +1,27 @@
+name: Run test
+
+on:
+  push:
+    branches: [main]
+  pull_request: 
+    branches: 
+      - '**'
+
+jobs:
+  run_hardhat_test:
+    name: Run test with Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [14]
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/checkout@v2
+      - name: Install yarn
+        run: yarn --frozen-lockfile
+      - name: Install dependencies
+        run: yarn install
+      - name: Run tests
+        run: yarn test

@@ -75,3 +75,19 @@ To enable sequential minting by the same wallet, comment `process.exit(0)` at th
 **Make sure that the function you will use is properly set up.**
 
 **Anything included in this repository may not be shared, distributed, modified, gifted or sold without the owner's consent.**
+
+## Hardhat Test
+
+This project has a test kit to showcase how it 
+
+npm install  @openzeppelin/contracts @chainlink/contracts @openzeppelin/contracts-upgradeable 
+
+Try running some of the following tasks:
+
+```shell
+npx hardhat help
+npx hardhat test
+GAS_REPORT=true npx hardhat test
+npx hardhat node
+npx hardhat run scripts/deploy.js
+```
