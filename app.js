@@ -28,7 +28,6 @@ const { checkResultErrors } = require("ethers/lib/utils");
 
 // block produced. Current ethereum block is 15202823 july 24 2022
 let targetBlockNumber = 20000000;
-
 // blocktime is expressed in unix / 1000 https://www.epochconverter.com/
 // initiate with Number.POSITIVE_INFINITY if listening to initializer
 let publicSaleStartTime = Number.POSITIVE_INFINITY;
@@ -36,6 +35,7 @@ let allowlistStartTime = Number.POSITIVE_INFINITY;
 let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
 let salePrice = ethers.utils.parseEther("0.0"); // public sale price
 const amount = 1; // amount per tx
+
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
@@ -46,8 +46,8 @@ const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
 const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 const gasLimit = 300000;
 
-const test = true; //set to false if using hardhat
-const avalanche = 2; // 0 false, 1 true, 2 hardhat, 3 snowsight
+const test = false; //set to false if using hardhat
+const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
 const allowlist = false; // if minting to allowlist
@@ -87,7 +87,14 @@ let wallets = [];
 instantiateWallets([
   process.env.PRIVATE_KEY1,
   process.env.PRIVATE_KEY2,
-  process.env.PRIVATE_KEY3,
+  // process.env.PRIVATE_KEY3,
+  // process.env.PRIVATE_KEY4,
+  // process.env.PRIVATE_KEY5,
+  // process.env.PRIVATE_KEY6,
+  // process.env.PRIVATE_KEY10,
+  // process.env.PRIVATE_KEY11,
+  // process.env.PRIVATE_KEY12,
+  // process.env.PRIVATE_KEY13
 ]);
 
 //
@@ -132,6 +139,8 @@ async function initiateSigner(privateKey) {
   let signer = [null, null];
   signer[0] = new ethers.Wallet(privateKey, httpProvider);
   signer[1] = await signer[0].getTransactionCount();
+  console.log(signer[0]);
+  console.log(signer[1]);
   return signer;
 }
 
@@ -160,8 +169,6 @@ async function snipe() {
 // Mint function, constructs the mint call
 async function mint(contract, wallet) {
   const [signer, nonce] = wallet;
-  console.log("signer", signer);
-  console.log("nonce", nonce);
   let options = {
     maxFeePerGas: maxFeePerGas,
     maxPriorityFeePerGas: maxPriorityFeePerGas,
