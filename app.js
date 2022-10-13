@@ -32,9 +32,9 @@ let targetBlockNumber = 20000000;
 // initiate with Number.POSITIVE_INFINITY if listening to initializer
 let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
-let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
-let salePrice = ethers.utils.parseEther("0.0"); // public sale price
-const amount = 1; // amount per tx
+let allowlistPrice = ethers.utils.parseEther("3.75"); // allowlist sale price
+let salePrice = ethers.utils.parseEther("3.75"); // public sale price
+const amount = 3; // amount per tx
 
 
 // If function depends on owner wallet to identify if certain tx
@@ -42,15 +42,15 @@ const amount = 1; // amount per tx
 const ownerWallet = "0x";
 
 // These options must be set manually
-const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
+const maxFeePerGas = ethers.utils.parseUnits("1300", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("666", "gwei");
 const gasLimit = 300000;
 
 const test = false; //set to false if using hardhat
 const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
-const allowlist = false; // if minting to allowlist
+const allowlist = true; // if minting to allowlist
 const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY; // wallet use to pay for snowsight usage
 const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node
@@ -85,16 +85,17 @@ const httpContract = new ethers.Contract(
 // Instantiate wallets. Parse in all private keys you want to use
 let wallets = [];
 instantiateWallets([
-  process.env.PRIVATE_KEY1,
+  // process.env.PRIVATE_KEY1,
   process.env.PRIVATE_KEY2,
   // process.env.PRIVATE_KEY3,
   // process.env.PRIVATE_KEY4,
   // process.env.PRIVATE_KEY5,
   // process.env.PRIVATE_KEY6,
-  // process.env.PRIVATE_KEY10,
-  // process.env.PRIVATE_KEY11,
+  process.env.PRIVATE_KEY11,
   // process.env.PRIVATE_KEY12,
-  // process.env.PRIVATE_KEY13
+  // process.env.PRIVATE_KEY13,
+  process.env.PRIVATE_KEY14,
+  process.env.PRIVATE_KEY15
 ]);
 
 //
@@ -149,7 +150,6 @@ async function snipe() {
   console.log("minting");
   let contract = wsOnly ? wsContract : httpContract;
   if (!test) {
-    // mock mint
     let mints = wallets.map(async (wallet) => {
       mint(contract, wallet);
     });
@@ -161,6 +161,8 @@ async function snipe() {
       const [w, nonce] = wallet;
       console.log("w", w);
       console.log("n", nonce);
+      console.log("price", allowlistPrice * amount);
+      console.log("alter", allowlistPrice.mul(amount));
     });
     await Promise.all(mints);
     console.log("mock mint ran successfully!");
@@ -178,6 +180,8 @@ async function mint(contract, wallet) {
   };
   // if it requires parsing a signature, make sure to include it as a param
   if (requiresSignature) {
+    cosnole.log("mint")
+    try {
     allowlist
       ? contract
           .connect(signer)
@@ -185,10 +189,17 @@ async function mint(contract, wallet) {
       : contract
           .connect(signer)
           .publicSaleMint(amount, parseSignature(signer.address), options);
+        } catch (e) {
+          console.log(e);
+        }
   } else {
-    allowlist
+    try {
+      allowlist
       ? contract.connect(signer).allowlistMint(amount, options)
       : contract.connect(signer).publicSaleMint(amount, options);
+    } catch (e) {
+      console.log(e);
+    }
   }
 }
 
@@ -197,8 +208,11 @@ async function presetTime() {
   allowlistStartTime = allowlistStartTime.toNumber();
   publicSaleStartTime = await httpContract.publicSaleStartTime();
   publicSaleStartTime = publicSaleStartTime.toNumber();
-  allowlistPrice = await httpContract.allowlistPrice();
-  salePrice = await httpContract.salePrice();
+  // allowlistPrice = await httpContract.allowlistPrice();
+  // salePrice = await httpContract.salePrice();
+  // console.log('a',allowlistPrice);
+  // console.log('s', salePrice);
+
   const estimatedTime = allowlist
     ? allowlistStartTime * 1000 - Date.now()
     : publicSaleStartTime * 1000 - Date.now();
