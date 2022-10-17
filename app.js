@@ -16,6 +16,7 @@ const { ethers } = require("ethers");
 const abi = require("./abi.json");
 const parseSignature = require("./utils/parseSignature.js");
 const fetchABI = require("./utils/fetchABI.js");
+const WebSocket = require("ws");
 const { checkResultErrors } = require("ethers/lib/utils");
 
 //                    ▄    ██
@@ -32,50 +33,53 @@ let targetBlockNumber = 20000000;
 // initiate with Number.POSITIVE_INFINITY if listening to initializer
 let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
-let allowlistPrice = ethers.utils.parseEther("3.75"); // allowlist sale price
-let salePrice = ethers.utils.parseEther("3.75"); // public sale price
-const amount = 3; // amount per tx
 
+let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
+let salePrice = ethers.utils.parseEther("0.0"); // public sale price
+
+const amount = 3; // amount per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
 const ownerWallet = "0x";
 
 // These options must be set manually
-const maxFeePerGas = ethers.utils.parseUnits("1300", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("666", "gwei");
+const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 const gasLimit = 300000;
 
 const test = false; //set to false if using hardhat
 const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
+const spamMint = 0;
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
 const allowlist = true; // if minting to allowlist
 const requiresSignature = false;
-const snowsightPK = process.env.PRIVATE_KEY; // wallet use to pay for snowsight usage
-const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node
-
-abiFetch ? fetchABI(avalanche) : console.log("abi has been manually set");
+const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
+const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node. wsOnly recommended
 
 // Initialize providers
 const wsProvider = new ethers.providers.WebSocketProvider(
-  avalanche == 2
+  snowsight
+    ? process.env.WS_SNOWSIGHT
+    : avalanche == 2
     ? process.env.WS_HH
     : avalanche
     ? process.env.WS
     : process.env.WS_ETH
 );
 const httpProvider = new ethers.providers.JsonRpcProvider(
-  avalanche == 2
-    ? process.env.HTTP_HH
-    : avalanche
-    ? process.env.HTTP
-    : process.env.HTTP_ETH
+  avalanche == 2 ? process.env.HTTP_HH : avalanche ? process.env.HTTP : process.env.HTTP_ETH
 );
+
+// intialize abi
+abiFetch ? fetchABI(avalanche) : console.log("abi has been manually set");
+
+// initialzie snowsight webSocket
+snowsight ? snowSightMessage(snowsightPK) : console.log("snowsight not enabled");
 
 // Initialize contract instances
 const wsContract = new ethers.Contract(process.env.CONTRACT, abi, wsProvider);
-
 const httpContract = new ethers.Contract(
   avalanche == 2 ? process.env.HH_CONTRACT : process.env.CONTRACT,
   abi,
@@ -85,23 +89,11 @@ const httpContract = new ethers.Contract(
 // Instantiate wallets. Parse in all private keys you want to use
 let wallets = [];
 instantiateWallets([
-  // process.env.PRIVATE_KEY1,
-  process.env.PRIVATE_KEY2,
+  process.env.PRIVATE_KEY1,
+  // process.env.PRIVATE_KEY2,
   // process.env.PRIVATE_KEY3,
   // process.env.PRIVATE_KEY4,
-  // process.env.PRIVATE_KEY5,
-  // process.env.PRIVATE_KEY6,
-  process.env.PRIVATE_KEY11,
-  // process.env.PRIVATE_KEY12,
-  // process.env.PRIVATE_KEY13,
-  process.env.PRIVATE_KEY14,
-  process.env.PRIVATE_KEY15
 ]);
-
-//
-snowsight
-  ? snowSightMessage(snowsightPK)
-  : console.log("snowsight not enabled");
 
 //   ▄▀█▄                             ▄    ██
 // ▄██▄   ▄▄▄ ▄▄▄  ▄▄ ▄▄▄     ▄▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
@@ -110,10 +102,10 @@ snowsight
 // ▄██▄    ▀█▄▄▀█▄ ▄██▄ ██▄  ▀█▄▄▄▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀  ↓
 
 async function snowSightMessage(privateKey) {
-  let snowSigner = await initiateSigner(privateKey);
+  let snowWallet = new ethers.Wallet(privateKey, httpProvider);
 
   const key = "Sign this message to authenticate your wallet with Snowsight.";
-  const signed_key = await snowSigner[0].signMessage(key);
+  const signed_key = await snowWallet.signMessage(key);
 
   let message = JSON.stringify({ signed_key: signed_key });
 
@@ -122,13 +114,22 @@ async function snowSightMessage(privateKey) {
   });
 
   wsProvider.on("message", function message(data) {
-    console.log("received: %s", data);
+    console.log("received:", data);
+  });
+
+  wsProvider.on("error", function message(data) {
+    console.log("error:", data);
   });
 }
 
 async function instantiateWallets(privateKeys) {
   const promises = privateKeys.map(async (privateKey) => {
-    const wallet = await initiateSigner(privateKey);
+    let wallet;
+    try {
+      wallet = await initiateWallet(privateKey);
+    } catch (error) {
+      console.log(error);
+    }
     wallets.push(wallet);
   });
   await Promise.all(promises);
@@ -136,12 +137,12 @@ async function instantiateWallets(privateKeys) {
 
 // Constructs signer, initiating a wallet instance and getting its nonce
 // for quick access to nonce instead of having it retrieved during call
-async function initiateSigner(privateKey) {
+async function initiateWallet(privateKey) {
   let signer = [null, null];
-  signer[0] = new ethers.Wallet(privateKey, httpProvider);
+  signer[0] = new ethers.Wallet(privateKey, wsOnly ? wsProvider : httpProvider);
   signer[1] = await signer[0].getTransactionCount();
-  console.log(signer[0]);
-  console.log(signer[1]);
+  console.log("signer:", signer[0].address);
+  console.log("nonce:", signer[1]);
   return signer;
 }
 
@@ -158,12 +159,15 @@ async function snipe() {
   } else {
     // mock mint
     let mints = wallets.map(async (wallet) => {
-      const [w, nonce] = wallet;
-      console.log("w", w);
-      console.log("n", nonce);
-      console.log("price", allowlistPrice * amount);
-      console.log("alter", allowlistPrice.mul(amount));
+      const [signer, nonce] = wallet;
+      console.log("signer", signer);
+      console.log("nonce", nonce);
     });
+    if (spamMint > 0) {
+      for (let i = 0; i < spamMint; i++) {
+        await Promise.all(mints);
+      }
+    }
     await Promise.all(mints);
     console.log("mock mint ran successfully!");
   }
@@ -178,25 +182,24 @@ async function mint(contract, wallet) {
     gasLimit: gasLimit,
     nonce: nonce,
   };
+
+  // increment nonce for next mint
+  wallet[1]++;
   // if it requires parsing a signature, make sure to include it as a param
   if (requiresSignature) {
-    cosnole.log("mint")
+    cosnole.log("mint");
     try {
-    allowlist
-      ? contract
-          .connect(signer)
-          .allowlistMint(amount, parseSignature(signer.address), options)
-      : contract
-          .connect(signer)
-          .publicSaleMint(amount, parseSignature(signer.address), options);
-        } catch (e) {
-          console.log(e);
-        }
+      allowlist
+        ? contract.connect(signer).allowlistMint(amount, parseSignature(signer.address), options)
+        : contract.connect(signer).publicSaleMint(amount, parseSignature(signer.address), options);
+    } catch (e) {
+      console.log(e);
+    }
   } else {
     try {
       allowlist
-      ? contract.connect(signer).allowlistMint(amount, options)
-      : contract.connect(signer).publicSaleMint(amount, options);
+        ? contract.connect(signer).allowlistMint(amount, options)
+        : contract.connect(signer).publicSaleMint(amount, options);
     } catch (e) {
       console.log(e);
     }
@@ -204,26 +207,29 @@ async function mint(contract, wallet) {
 }
 
 async function presetTime() {
-  allowlistStartTime = await httpContract.allowlistStartTime();
-  allowlistStartTime = allowlistStartTime.toNumber();
-  publicSaleStartTime = await httpContract.publicSaleStartTime();
-  publicSaleStartTime = publicSaleStartTime.toNumber();
-  // allowlistPrice = await httpContract.allowlistPrice();
-  // salePrice = await httpContract.salePrice();
-  // console.log('a',allowlistPrice);
-  // console.log('s', salePrice);
+  allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber();
+  publicSaleStartTime = (await httpContract.publicSaleStartTime()).toNumber();
+  allowlistPrice = (await httpContract.allowlistPrice()) * amount;
+  salePrice = (await httpContract.salePrice()) * amount;
+  const now = Date.now();
+  const timestamp =
+    (await httpProvider.getBlock(await httpProvider.getBlockNumber())).timestamp * 1000;
+  console.log("now:", now);
+  console.log("timestamp:", timestamp);
+  console.log(timestamp - now);
 
-  const estimatedTime = allowlist
-    ? allowlistStartTime * 1000 - Date.now()
-    : publicSaleStartTime * 1000 - Date.now();
+  const estimatedTime =
+    (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - Date.now() - (timestamp - now);
 
+  console.log("allowlist price:", allowlistPrice);
+  console.log("sale price:", salePrice);
   console.log("estimated time:", estimatedTime);
   console.log("allowlist time:", allowlistStartTime);
   console.log("public sale time:", publicSaleStartTime);
   console.log("now:", Date.now() / 1000);
   setTimeout(function () {
     snipe();
-  }, estimatedTime);
+  }, estimatedTime - spamMint);
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
@@ -250,7 +256,8 @@ async function blockTimeListener() {
 async function blockNumberListener() {
   wsProvider.on("block", (block) => {
     console.log(block.number, "block time");
-    // targetBlockNumber -1 (will send tx 1 block before tx would actually be valid) -2 if you have a lot of latency
+    // targetBlockNumber -1 (will send tx 1 block before tx would actually be valid)
+    // -2 if you have a lot of latency
     if (targetBlockNumber - 1 <= block.number) {
       snipe();
     } else {
@@ -307,31 +314,23 @@ async function initializer() {
   wsContract.once(
     "Initialized",
     // passed parameters that initialize sales
-    async (
-      _allowlistStartTime,
-      _publicSaleStartTime,
-      _allowlistPrice,
-      _salePrice
-    ) => {
+    async (_allowlistStartTime, _publicSaleStartTime, _allowlistPrice, _salePrice) => {
       console.log("Initialized");
       allowlistStartTime = _allowlistStartTime;
       publicSaleStartTime = _publicSaleStartTime;
       allowlistPrice = _allowlistPrice;
       salePrice = _salePrice;
 
-      console.log(
-        _allowlistStartTime,
-        _publicSaleStartTime,
-        _allowlistPrice,
-        _salePrice
-      );
+      console.log(_allowlistStartTime, _publicSaleStartTime, _allowlistPrice, _salePrice);
       const estimatedTime = allowlist
         ? allowlistStartTime * 1000 - Date.now()
         : publicSaleStartTime * 1000 - Date.now();
-      setTimeout(snipe(), estimatedTime);
+      setTimeout(snipe(), estimatedTime - spamMint);
     }
   );
 }
+
+function configMint() {}
 
 //                                            ▄
 //   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄
