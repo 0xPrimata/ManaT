@@ -44,8 +44,8 @@ const amount = 1; // amount per tx
 const ownerWallet = "0x";
 
 // These options must be set manually
-const maxFeePerGas = ethers.utils.parseUnits("1500", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("1001", "gwei");
+const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 const gasLimit = 300000;
 
 const test = true; //set to false if using hardhat
