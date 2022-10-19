@@ -27,38 +27,61 @@ const { checkResultErrors } = require("ethers/lib/utils");
 //          ██
 //         ▀▀▀▀
 
-// block produced. Current ethereum block is 15202823 july 24 2022
-let targetBlockNumber = 20000000;
+// Current ethereum block is 15202823 july 24 2022
+// script sets target block according to contract
+let targetBlockNumber = Number.POSITIVE_INFINITY;
 // blocktime is expressed in unix / 1000 https://www.epochconverter.com/
-// initiate with Number.POSITIVE_INFINITY if listening to initializer
+// script sets target start time according to contract
 let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
 
-let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
-let salePrice = ethers.utils.parseEther("3.0"); // public sale price
+// Price in ether. 1 ether = 10^18 wei
+// script sets price according to contract
+let allowlistPrice = ethers.utils.parseEther("0.0");
+let salePrice = ethers.utils.parseEther("0.0"); // public sale price
 
-const amount = 1; // amount per tx
+const amount = 1; // amount to mint per tx
 
 // If function depends on owner wallet to identify if certain tx
-// has been called (pendingTxListener.js)
+// has been called (pendingTxListener.js requires a set ownerWallet)
 const ownerWallet = "0x";
 
-// These options must be set manually
+/**
+ * @notify - You must be aware of these options and set them manually
+ * @param maxFeePerGas Max fee per gas is refunded if not utilized
+ * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
+ */
 const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
 const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 const gasLimit = 300000;
 
-const test = true; //set to false if using hardhat
-const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
-const spamMint = 0; // times you would like the bot to mint prior to time
-const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
-const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
-const allowlist = false; // if minting to allowlist
+/**
+ * @param test        set to false if using hardhat
+ * @param avalanche   0 false, 1 true, 2 hardhat
+ * @param spamMint    times you would like the bot to attempt to mint prior to on time mint
+ * @param abiFetch    if you want to fetch ABI (requires API KEY from blockscan)
+ * @param wsOnly      calling write transactions to WebSocket (disallowed by Avalanche RPC)
+ * @param allowlist   if minting to allowlist
+ * @param requiresSignature if minting requires signature
+ * @param snowSightPK Snowsight private key
+ * @param snowSight   Tx Propagator service provider. Requires Premium plan. wsOnly recommended.
+ */
+const test = true;
+const avalanche = 1;
+const spamMint = 0;
+const abiFetch = false;
+const wsOnly = false;
+const allowlist = false;
 const requiresSignature = false;
-const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
-const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node. wsOnly recommended
+const snowsightPK = process.env.PRIVATE_KEY1;
+const snowsight = false;
 
-// Initialize providers
+// ██            ██    ▄    ██          ▀██   ██                    ▄    ██
+// ▄▄▄  ▄▄ ▄▄▄   ▄▄▄  ▄██▄  ▄▄▄   ▄▄▄▄    ██  ▄▄▄  ▄▄▄▄▄▄   ▄▄▄▄   ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄
+//  ██   ██  ██   ██   ██    ██  ▀▀ ▄██   ██   ██  ▀  ▄█▀  ▀▀ ▄██   ██    ██  ▄█  ▀█▄  ██  ██
+//  ██   ██  ██   ██   ██    ██  ▄█▀ ██   ██   ██   ▄█▀    ▄█▀ ██   ██    ██  ██   ██  ██  ██
+// ▄██▄ ▄██▄ ██▄ ▄██▄  ▀█▄▀ ▄██▄ ▀█▄▄▀█▀ ▄██▄ ▄██▄ ██▄▄▄▄█ ▀█▄▄▀█▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ ↓
+
 const wsProvider = new ethers.providers.WebSocketProvider(
   snowsight
     ? process.env.WS_SNOWSIGHT
@@ -75,7 +98,7 @@ const httpProvider = new ethers.providers.JsonRpcProvider(
 // intialize abi
 abiFetch ? fetchABI(avalanche) : console.log("abi has been manually set");
 
-// initialzie snowsight webSocket
+// intialize snowsight webSocket
 snowsight ? snowSightMessage(snowsightPK) : console.log("snowsight not enabled");
 
 // Initialize contract instances
@@ -86,19 +109,12 @@ const httpContract = new ethers.Contract(
   httpProvider
 );
 
-// Instantiate wallets. Parse in all private keys you want to use
+/**
+ * @notify Add and remove private keys from this array
+ *         according to how many you want to mint with
+ */
 let wallets = [];
-instantiateWallets([
-  process.env.PRIVATE_KEY4,
-  // process.env.PRIVATE_KEY2,
-  // process.env.PRIVATE_KEY3,
-  // process.env.PRIVATE_KEY4,
-  // process.env.SA12,
-  // process.env.SA20,
-  // process.env.SA54,
-  // process.env.SA59,
-  // process.env.SA65
-]);
+instantiateWallets([process.env.PRIVATE_KEY1, process.env.PRIVATE_KEY2, process.env.PRIVATE_KEY3]);
 
 //   ▄▀█▄                             ▄    ██
 // ▄██▄   ▄▄▄ ▄▄▄  ▄▄ ▄▄▄     ▄▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
@@ -106,6 +122,9 @@ instantiateWallets([
 //  ██     ██  ██   ██  ██  ██       ██    ██  ██   ██  ██  ██  ▄ ▀█▄▄
 // ▄██▄    ▀█▄▄▀█▄ ▄██▄ ██▄  ▀█▄▄▄▀  ▀█▄▀ ▄██▄  ▀█▄▄█▀ ▄██▄ ██▄ █▀▄▄█▀  ↓
 
+/**
+ * @param privateKey Private key used to pay for SnowSight premium plan
+ */
 async function snowSightMessage(privateKey) {
   let snowWallet = new ethers.Wallet(privateKey, httpProvider);
 
@@ -127,6 +146,9 @@ async function snowSightMessage(privateKey) {
   });
 }
 
+/**
+ * @param privateKeys Private keys to be used to mint
+ */
 async function instantiateWallets(privateKeys) {
   const promises = privateKeys.map(async (privateKey) => {
     let wallet;
@@ -140,8 +162,11 @@ async function instantiateWallets(privateKeys) {
   await Promise.all(promises);
 }
 
-// Constructs signer, initiating a wallet instance and getting its nonce
-// for quick access to nonce instead of having it retrieved during call
+/**
+ * @notify Constructs signer, initiating a wallet instance and getting its nonce
+ *         for quick access to nonce instead of having it retrieved during call
+ * @param privateKey Private key to be used to mint
+ */
 async function initiateWallet(privateKey) {
   let signer = [null, null];
   signer[0] = new ethers.Wallet(privateKey, wsOnly ? wsProvider : httpProvider);
@@ -151,8 +176,10 @@ async function initiateWallet(privateKey) {
   return signer;
 }
 
-// Actionable mint function
-async function snipe() {
+/**
+ * @notify Actionable mint
+ */
+async function raid() {
   console.log("minting");
   let contract = wsOnly ? wsContract : httpContract;
   if (!test) {
@@ -161,7 +188,7 @@ async function snipe() {
     });
     for (let i = 0; i < spamMint; i++) {
       await Promise.all(mints);
-      wait(1);
+      await halt(1000);
     }
     await Promise.all(mints);
     console.log("mint ran successfully!");
@@ -175,14 +202,17 @@ async function snipe() {
     if (spamMint > 0) {
       for (let i = 0; i < spamMint; i++) {
         await Promise.all(mints);
-        wait(1000);
+        await halt(1000);
       }
     }
     await Promise.all(mints);
     console.log("mock mint ran successfully!");
   }
 }
-// Mint function, constructs the mint call
+
+/**
+ * @notify Mint function, constructs the mint call
+ */
 async function mint(contract, wallet) {
   const [signer, nonce] = wallet;
   let options = {
@@ -192,7 +222,6 @@ async function mint(contract, wallet) {
     gasLimit: gasLimit,
     nonce: nonce,
   };
-
   // increment nonce for next mint
   wallet[1]++;
   // if it requires parsing a signature, make sure to include it as a param
@@ -216,6 +245,10 @@ async function mint(contract, wallet) {
   }
 }
 
+/**
+ * @notify Contract has already been initialized.
+ *         Retrieves all required contract data to mint on time.
+ */
 async function presetTime() {
   allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber();
   publicSaleStartTime = (await httpContract.publicSaleStartTime()).toNumber();
@@ -226,14 +259,13 @@ async function presetTime() {
     (await httpProvider.getBlock(await httpProvider.getBlockNumber())).timestamp * 1000;
   console.log("timestamp:", timestamp);
   console.log("now:", now);
-  let difference = (now - timestamp);
-  console.log('difference', difference);
+  let difference = now - timestamp;
+  console.log("difference", difference);
 
-  const estimatedTime =
-    (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (Date.now());
+  const estimatedTime = (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - Date.now();
   const blockEstimatedTime =
     (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
-  console.log('blockEstimatedTime:', blockEstimatedTime);
+  console.log("blockEstimatedTime:", blockEstimatedTime);
   console.log("allowlist price:", allowlistPrice);
   console.log("sale price:", salePrice);
   console.log("estimated time:", estimatedTime);
@@ -241,11 +273,13 @@ async function presetTime() {
   console.log("public sale time:", publicSaleStartTime);
   console.log("now:", Date.now() / 1000);
   setTimeout(function () {
-    snipe();
-  }, estimatedTime - (spamMint * 1000));
+    raid();
+  }, estimatedTime - spamMint * 1000);
 }
 
-// Listens to block time and mints once current time is above targetBlockTime
+/**
+ * @notify Listens to block time and mints once current time is above targetBlockTime
+ */
 async function blockTimeListener() {
   wsProvider.on("block", function (block) {
     let time = Date.now();
@@ -258,28 +292,32 @@ async function blockTimeListener() {
     targetBlockTime = allowlist ? allowlistStartTime : publicSaleStartTime;
     if (targetBlockTime <= time / 1000) {
       console.log("going to mint");
-      snipe();
+      raid();
     } else {
       console.log("not yet");
     }
   });
 }
 
-// Listen to blocks number
+/**
+ * @notify Listen to blocks number and calls mint once current block is one less then targetBlockNumber
+ */
 async function blockNumberListener() {
   wsProvider.on("block", (block) => {
     console.log(block.number, "block time");
     // targetBlockNumber -1 (will send tx 1 block before tx would actually be valid)
     // -2 if you have a lot of latency
     if (targetBlockNumber - 1 <= block.number) {
-      snipe();
+      raid();
     } else {
       console.log("not yet");
     }
   });
 }
 
-// Listens to contract variable and mints once they are valid for minting
+/**
+ * @notify Listens to contract variable and mints once they are valid for minting
+ */
 async function stateContractListener() {
   wsProvider.on("block", async (block) => {
     let paused = await httpContract.paused();
@@ -287,12 +325,14 @@ async function stateContractListener() {
     console.log(paused);
     console.log(onlyAllowList);
     if (!paused && onlyAllowList) {
-      snipe();
+      raid();
     }
   });
 }
 
-// listen to pending txs, if any, find one that corresponds to method and execute after it
+/**
+ * @notify listen to pending txs, if any, find one that corresponds to method and execute after it
+ */
 async function pendingTxListener() {
   wsProvider.on("pending", async (tx) => {
     const txInfo = await httpProvider.getTransaction(tx);
@@ -305,24 +345,27 @@ async function pendingTxListener() {
           ownerWallet.toLowerCase()
       ) {
         console.log(txInfo);
-        snipe();
+        raid();
       }
     }
   });
 }
 
-// listen to contract events and execute after it
+/**
+ * @notify Listen to contract events and execute after it
+ */
 async function eventListener() {
   wsContract.on("Unpaused", async (from) => {
     console.log(`${from} has unpaused the contract`);
     if (!test) {
-      snipe();
+      raid();
     }
   });
 }
 
-// listen to contract Initialize event altering states and act accordingly
-// pair this with blocktime listener
+/**
+ * @notify Listen to contract Initialize event altering states and act mint on time
+ */
 async function initializer() {
   wsContract.once(
     "Initialized",
@@ -335,15 +378,22 @@ async function initializer() {
       salePrice = _salePrice;
 
       console.log(_allowlistStartTime, _publicSaleStartTime, _allowlistPrice, _salePrice);
-      const estimatedTime = allowlist
-        ? allowlistStartTime * 1000 - Date.now()
-        : publicSaleStartTime * 1000 - Date.now();
-      setTimeout(snipe(), estimatedTime - spamMint);
+      const timestamp =
+        (await wsProvider.getBlock(await wsProvider.getBlockNumber())).timestamp * 1000;
+      console.log('timestamp:',timestamp);
+      console.log('now:', Date.now());
+      console.log('difference', Date.now() - timestamp);
+      const blockEstimatedTime =
+        (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
+      setTimeout(raid(), blockEstimatedTime);
     }
   );
 }
 
-const wait = ms => new Promise(r => setTimeout(r, ms));
+/**
+ * @notify Helper function to halt code execution
+ */
+const halt = (ms) => new Promise((r) => setTimeout(r, ms));
 
 //                                            ▄
 //   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄
