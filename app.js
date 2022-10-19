@@ -35,25 +35,25 @@ let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
 
 let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
-let salePrice = ethers.utils.parseEther("0.0"); // public sale price
+let salePrice = ethers.utils.parseEther("3.0"); // public sale price
 
-const amount = 3; // amount per tx
+const amount = 1; // amount per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js)
 const ownerWallet = "0x";
 
 // These options must be set manually
-const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
+const maxFeePerGas = ethers.utils.parseUnits("1500", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("1001", "gwei");
 const gasLimit = 300000;
 
-const test = false; //set to false if using hardhat
+const test = true; //set to false if using hardhat
 const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
-const spamMint = 0;
+const spamMint = 0; // times you would like the bot to mint prior to time
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
 const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
-const allowlist = true; // if minting to allowlist
+const allowlist = false; // if minting to allowlist
 const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
 const snowsight = false; // if you are going to use snowsight as tx propagator. This is a paid private node. wsOnly recommended
@@ -89,10 +89,15 @@ const httpContract = new ethers.Contract(
 // Instantiate wallets. Parse in all private keys you want to use
 let wallets = [];
 instantiateWallets([
-  process.env.PRIVATE_KEY1,
+  process.env.PRIVATE_KEY4,
   // process.env.PRIVATE_KEY2,
   // process.env.PRIVATE_KEY3,
   // process.env.PRIVATE_KEY4,
+  // process.env.SA12,
+  // process.env.SA20,
+  // process.env.SA54,
+  // process.env.SA59,
+  // process.env.SA65
 ]);
 
 //   ▄▀█▄                             ▄    ██
@@ -154,6 +159,10 @@ async function snipe() {
     let mints = wallets.map(async (wallet) => {
       mint(contract, wallet);
     });
+    for (let i = 0; i < spamMint; i++) {
+      await Promise.all(mints);
+      wait(1);
+    }
     await Promise.all(mints);
     console.log("mint ran successfully!");
   } else {
@@ -166,6 +175,7 @@ async function snipe() {
     if (spamMint > 0) {
       for (let i = 0; i < spamMint; i++) {
         await Promise.all(mints);
+        wait(1000);
       }
     }
     await Promise.all(mints);
@@ -209,18 +219,21 @@ async function mint(contract, wallet) {
 async function presetTime() {
   allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber();
   publicSaleStartTime = (await httpContract.publicSaleStartTime()).toNumber();
-  allowlistPrice = (await httpContract.allowlistPrice()) * amount;
-  salePrice = (await httpContract.salePrice()) * amount;
+  allowlistPrice = (await httpContract.allowlistPrice()).mul(amount);
+  salePrice = (await httpContract.salePrice()).mul(amount);
   const now = Date.now();
   const timestamp =
     (await httpProvider.getBlock(await httpProvider.getBlockNumber())).timestamp * 1000;
-  console.log("now:", now);
   console.log("timestamp:", timestamp);
-  console.log(timestamp - now);
+  console.log("now:", now);
+  let difference = (now - timestamp);
+  console.log('difference', difference);
 
   const estimatedTime =
-    (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - Date.now() - (timestamp - now);
-
+    (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (Date.now());
+  const blockEstimatedTime =
+    (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
+  console.log('blockEstimatedTime:', blockEstimatedTime);
   console.log("allowlist price:", allowlistPrice);
   console.log("sale price:", salePrice);
   console.log("estimated time:", estimatedTime);
@@ -229,7 +242,7 @@ async function presetTime() {
   console.log("now:", Date.now() / 1000);
   setTimeout(function () {
     snipe();
-  }, estimatedTime - spamMint);
+  }, estimatedTime - (spamMint * 1000));
 }
 
 // Listens to block time and mints once current time is above targetBlockTime
@@ -330,7 +343,7 @@ async function initializer() {
   );
 }
 
-function configMint() {}
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 //                                            ▄
 //   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄
