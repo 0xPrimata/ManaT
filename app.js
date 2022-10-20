@@ -50,10 +50,12 @@ const ownerWallet = "0x";
  * @notify - You must be aware of these options and set them manually
  * @param maxFeePerGas Max fee per gas is refunded if not utilized
  * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
+ * @param haltTime Time to halt in miliseconds (1000 = 1 second)
  */
-const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
+const maxFeePerGas = ethers.utils.parseUnits("1650", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("1005", "gwei");
 const gasLimit = 300000;
+const haltTime = 1300;
 
 /**
  * @param test        set to false if using hardhat
@@ -66,15 +68,27 @@ const gasLimit = 300000;
  * @param snowSightPK Snowsight private key
  * @param snowSight   Tx Propagator service provider. Requires Premium plan. wsOnly recommended.
  */
-const test = true;
+const test = false;
 const avalanche = 1;
-const spamMint = 0;
+const spamMint = 2;
 const abiFetch = false;
-const wsOnly = false;
+const wsOnly = true;
 const allowlist = false;
 const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY1;
 const snowsight = false;
+
+const utilizedPrivateKeys = [process.env.PRIVATE_KEY1, 
+  process.env.PRIVATE_KEY2, 
+  process.env.PRIVATE_KEY3,
+  process.env.PRIVATE_KEY4,
+  process.env.SA12,
+  process.env.SA20,
+  process.env.SA54,
+  process.env.SA59,
+  process.env.SA65,
+  process.env.SA91,
+]
 
 // ██            ██    ▄    ██          ▀██   ██                    ▄    ██
 // ▄▄▄  ▄▄ ▄▄▄   ▄▄▄  ▄██▄  ▄▄▄   ▄▄▄▄    ██  ▄▄▄  ▄▄▄▄▄▄   ▄▄▄▄   ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄
@@ -114,7 +128,7 @@ const httpContract = new ethers.Contract(
  *         according to how many you want to mint with
  */
 let wallets = [];
-instantiateWallets([process.env.PRIVATE_KEY1, process.env.PRIVATE_KEY2, process.env.PRIVATE_KEY3]);
+instantiateWallets(utilizedPrivateKeys);
 
 //   ▄▀█▄                             ▄    ██
 // ▄██▄   ▄▄▄ ▄▄▄  ▄▄ ▄▄▄     ▄▄▄▄  ▄██▄  ▄▄▄    ▄▄▄   ▄▄ ▄▄▄    ▄▄▄▄
@@ -186,10 +200,6 @@ async function raid() {
     let mints = wallets.map(async (wallet) => {
       mint(contract, wallet);
     });
-    for (let i = 0; i < spamMint; i++) {
-      await Promise.all(mints);
-      await halt(1000);
-    }
     await Promise.all(mints);
     console.log("mint ran successfully!");
   } else {
@@ -199,12 +209,6 @@ async function raid() {
       console.log("signer", signer);
       console.log("nonce", nonce);
     });
-    if (spamMint > 0) {
-      for (let i = 0; i < spamMint; i++) {
-        await Promise.all(mints);
-        await halt(1000);
-      }
-    }
     await Promise.all(mints);
     console.log("mock mint ran successfully!");
   }
@@ -213,8 +217,10 @@ async function raid() {
 /**
  * @notify Mint function, constructs the mint call
  */
-async function mint(contract, wallet) {
-  const [signer, nonce] = wallet;
+ async function mint(contract, wallet) {
+  let [signer, nonce] = wallet;
+  
+  for (i = 0; i <= spamMint; i++){
   let options = {
     maxFeePerGas: maxFeePerGas,
     maxPriorityFeePerGas: maxPriorityFeePerGas,
@@ -222,8 +228,9 @@ async function mint(contract, wallet) {
     gasLimit: gasLimit,
     nonce: nonce,
   };
-  // increment nonce for next mint
-  wallet[1]++;
+  console.log('nonce', nonce);
+    // increment nonce for next mint
+  nonce++;
   // if it requires parsing a signature, make sure to include it as a param
   if (requiresSignature) {
     cosnole.log("mint");
@@ -243,6 +250,13 @@ async function mint(contract, wallet) {
       console.log(e);
     }
   }
+  try {
+  console.log("halting");
+  await halt(haltTime);
+  } catch(e){
+    console.log(e)
+  }
+  }
 }
 
 /**
@@ -250,13 +264,17 @@ async function mint(contract, wallet) {
  *         Retrieves all required contract data to mint on time.
  */
 async function presetTime() {
-  allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber();
-  publicSaleStartTime = (await httpContract.publicSaleStartTime()).toNumber();
-  allowlistPrice = (await httpContract.allowlistPrice()).mul(amount);
-  salePrice = (await httpContract.salePrice()).mul(amount);
+  try {
+    allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber();
+    publicSaleStartTime = (await httpContract.publicSaleStartTime()).toNumber();
+    allowlistPrice = (await httpContract.allowlistPrice()).mul(amount);
+    salePrice = (await httpContract.salePrice()).mul(amount);
+  } catch (e) {
+    console.log('e',e);
+  }
   const now = Date.now();
   const timestamp =
-    (await wsProvider.getBlock((await wsProvider.getBlockNumber()+1))).timestamp * 1000;
+    (await wsProvider.getBlock((await wsProvider.getBlockNumber()))).timestamp * 1000;
   console.log("timestamp:", timestamp);
   console.log("now:", now);
   let difference = now - timestamp;
@@ -275,7 +293,7 @@ async function presetTime() {
   console.log("now:", Date.now() / 1000);
   setTimeout(function () {
     raid();
-  }, estimatedTime - spamMint * 1000);
+  }, estimatedTime - (spamMint * 1000));
 }
 
 /**
@@ -385,7 +403,7 @@ async function initializer() {
       console.log('now:', Date.now());
       console.log('difference', Date.now() - timestamp);
       const blockEstimatedTime =
-        (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 200);
+        (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
       setTimeout(raid(), blockEstimatedTime);
     }
   );
