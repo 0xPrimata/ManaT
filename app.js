@@ -35,7 +35,7 @@ let publicSaleStartTime = Number.POSITIVE_INFINITY;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
 
 let allowlistPrice = ethers.utils.parseEther("0.0"); // allowlist sale price
-let salePrice = ethers.utils.parseEther("3.0"); // public sale price
+let salePrice = ethers.utils.parseEther("0.0"); // public sale price
 
 const amount = 1; // amount per tx
 
@@ -45,14 +45,14 @@ const ownerWallet = "0x";
 
 // These options must be set manually
 const maxFeePerGas = ethers.utils.parseUnits("1500", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("1001", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("1000", "gwei");
 const gasLimit = 300000;
 
-const test = true; //set to false if using hardhat
+const test = false; //set to false if using hardhat
 const avalanche = 1; // 0 false, 1 true, 2 hardhat, 3 snowsight
 const spamMint = 0; // times you would like the bot to mint prior to time
 const abiFetch = false; // if you want to fetch ABI (requires API KEY from blockscan)
-const wsOnly = false; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
+const wsOnly = true; // calling write transactions to WebSocket (disallowed by Avalanche RPC)
 const allowlist = false; // if minting to allowlist
 const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY1; // wallet use to pay for snowsight usage
@@ -89,9 +89,9 @@ const httpContract = new ethers.Contract(
 // Instantiate wallets. Parse in all private keys you want to use
 let wallets = [];
 instantiateWallets([
-  process.env.PRIVATE_KEY4,
-  // process.env.PRIVATE_KEY2,
-  // process.env.PRIVATE_KEY3,
+  process.env.PRIVATE_KEY1,
+  process.env.PRIVATE_KEY2,
+  process.env.PRIVATE_KEY3,
   // process.env.PRIVATE_KEY4,
   // process.env.SA12,
   // process.env.SA20,
@@ -223,9 +223,8 @@ async function presetTime() {
   salePrice = (await httpContract.salePrice()).mul(amount);
   const now = Date.now();
   const timestamp =
-    (await httpProvider.getBlock(await httpProvider.getBlockNumber())).timestamp * 1000;
+    (await wsProvider.getBlock((await wsProvider.getBlockNumber()+1))).timestamp * 1000;
   console.log("timestamp:", timestamp);
-  console.log("now:", now);
   let difference = (now - timestamp);
   console.log('difference', difference);
 
@@ -235,6 +234,7 @@ async function presetTime() {
     (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
   console.log('blockEstimatedTime:', blockEstimatedTime);
   console.log("allowlist price:", allowlistPrice);
+  console.log('estimatedTime - blockEstimatedTime', estimatedTime - blockEstimatedTime);
   console.log("sale price:", salePrice);
   console.log("estimated time:", estimatedTime);
   console.log("allowlist time:", allowlistStartTime);
@@ -329,16 +329,19 @@ async function initializer() {
     // passed parameters that initialize sales
     async (_allowlistStartTime, _publicSaleStartTime, _allowlistPrice, _salePrice) => {
       console.log("Initialized");
-      allowlistStartTime = _allowlistStartTime;
-      publicSaleStartTime = _publicSaleStartTime;
-      allowlistPrice = _allowlistPrice;
-      salePrice = _salePrice;
+      allowlistStartTime = _allowlistStartTime.toNumber();
+      publicSaleStartTime = _publicSaleStartTime.toNumber();
+      allowlistPrice = _allowlistPrice.mul(amount);
+      salePrice = _salePrice.mul(amount);
 
       console.log(_allowlistStartTime, _publicSaleStartTime, _allowlistPrice, _salePrice);
-      const estimatedTime = allowlist
-        ? allowlistStartTime * 1000 - Date.now()
-        : publicSaleStartTime * 1000 - Date.now();
-      setTimeout(snipe(), estimatedTime - spamMint);
+      const timestamp =
+        (await wsProvider.getBlock(await wsProvider.getBlockNumber())).timestamp * 1000;
+      console.log(timestamp);
+      console.log(Date.now());
+      const blockEstimatedTime =
+        (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp-200);
+      setTimeout(snipe(), blockEstimatedTime);
     }
   );
 }
