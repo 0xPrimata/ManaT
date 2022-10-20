@@ -52,8 +52,8 @@ const ownerWallet = "0x";
  * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
  * @param haltTime Time to halt in miliseconds (1000 = 1 second)
  */
-const maxFeePerGas = ethers.utils.parseUnits("1650", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("1005", "gwei");
+const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
+const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 const gasLimit = 300000;
 const haltTime = 1300;
 
@@ -270,22 +270,13 @@ async function presetTime() {
     allowlistPrice = (await httpContract.allowlistPrice()).mul(amount);
     salePrice = (await httpContract.salePrice()).mul(amount);
   } catch (e) {
-    console.log('e',e);
+    console.log('e', e);
   }
-  const now = Date.now();
-  const timestamp =
-    (await wsProvider.getBlock((await wsProvider.getBlockNumber()))).timestamp * 1000;
-  console.log("timestamp:", timestamp);
-  console.log("now:", now);
-  let difference = now - timestamp;
-  console.log("difference", difference);
 
-  const estimatedTime = (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - Date.now();
-  const blockEstimatedTime =
-    (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
-  console.log("blockEstimatedTime:", blockEstimatedTime);
+  const timestamp = await blockEstimatedTime(allowlist ? allowlistStartTime : publicSaleStartTime);
+  console.log("timestamp:", timestamp);
+
   console.log("allowlist price:", allowlistPrice);
-  console.log('estimatedTime - blockEstimatedTime', estimatedTime - blockEstimatedTime);
   console.log("sale price:", salePrice);
   console.log("estimated time:", estimatedTime);
   console.log("allowlist time:", allowlistStartTime);
@@ -293,7 +284,7 @@ async function presetTime() {
   console.log("now:", Date.now() / 1000);
   setTimeout(function () {
     raid();
-  }, estimatedTime - (spamMint * 1000));
+  }, timestamp - (spamMint * 1000));
 }
 
 /**
@@ -397,14 +388,11 @@ async function initializer() {
       salePrice = _salePrice.mul(amount);
 
       console.log(_allowlistStartTime, _publicSaleStartTime, _allowlistPrice, _salePrice);
-      const timestamp =
-        (await wsProvider.getBlock(await wsProvider.getBlockNumber())).timestamp * 1000;
-      console.log('timestamp:',timestamp);
-      console.log('now:', Date.now());
-      console.log('difference', Date.now() - timestamp);
-      const blockEstimatedTime =
-        (allowlist ? allowlistStartTime : publicSaleStartTime) * 1000 - (timestamp - 1000);
-      setTimeout(raid(), blockEstimatedTime);
+    
+      const timestamp = await blockEstimatedTime(allowlist ? allowlistStartTime : publicSaleStartTime);
+      console.log("timestamp", timestamp);
+
+      setTimeout(raid(), timestamp);
     }
   );
 }
@@ -413,6 +401,13 @@ async function initializer() {
  * @notify Helper function to halt code execution
  */
 const halt = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function blockEstimatedTime(time) {
+  const timestamp =
+        (await wsProvider.getBlock(await wsProvider.getBlockNumber())).timestamp * 1000;
+  (time * 1000) - (timestamp);
+  return timestamp;
+}
 
 //                                            ▄
 //   ▄▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄    ▄▄▄   ▄▄▄ ▄▄  ▄██▄
