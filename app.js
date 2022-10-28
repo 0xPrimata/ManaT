@@ -40,7 +40,7 @@ let allowlistStartTime = Number.POSITIVE_INFINITY;
 let allowlistPrice = ethers.utils.parseEther("0.0");
 let salePrice = ethers.utils.parseEther("0.0"); // public sale price
 
-const amount = 1; // amount to mint per tx
+const amount = 5; // amount to mint per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js requires a set ownerWallet)
@@ -52,8 +52,8 @@ const ownerWallet = "0x";
  * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
  * @param haltTime Time to halt in miliseconds (1000 = 1 second)
  */
-const maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
-const maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
+let maxFeePerGas = ethers.utils.parseUnits("5000", "gwei");
+let maxPriorityFeePerGas = ethers.utils.parseUnits("4900", "gwei");
 const gasLimit = 300000;
 const haltTime = 1300;
 
@@ -70,7 +70,7 @@ const haltTime = 1300;
  */
 const test = false;
 const avalanche = 1;
-const spamMint = 2;
+const spamMint = 3;
 const abiFetch = false;
 const wsOnly = true;
 const allowlist = false;
@@ -78,16 +78,20 @@ const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY1;
 const snowsight = false;
 
-const utilizedPrivateKeys = [process.env.PRIVATE_KEY1, 
-  process.env.PRIVATE_KEY2, 
-  process.env.PRIVATE_KEY3,
-  process.env.PRIVATE_KEY4,
-  process.env.SA12,
-  process.env.SA20,
-  process.env.SA54,
-  process.env.SA59,
-  process.env.SA65,
-  process.env.SA91,
+const utilizedPrivateKeys = [
+                            process.env.PRIVATE_KEY1, 
+                            // process.env.PRIVATE_KEY2, 
+                            // process.env.PRIVATE_KEY3,
+                            // process.env.PRIVATE_KEY4,
+                            // process.env.SA7,
+                            // process.env.SA12,
+                            // process.env.SA14,
+                            // process.env.SA20,
+                            // process.env.SA54,
+                            // process.env.SA59,
+                            // process.env.SA65,
+                            // process.env.SA84,
+                            // process.env.SA91,
 ]
 
 // ██            ██    ▄    ██          ▀██   ██                    ▄    ██
@@ -231,6 +235,10 @@ async function raid() {
   console.log('nonce', nonce);
     // increment nonce for next mint
   nonce++;
+  maxFeePerGas = maxFeePerGas.mul(112).div(100);
+  console.log('maxFeePerGas', maxFeePerGas);
+  maxPriorityFeePerGas = maxPriorityFeePerGas.mul(112).div(100);
+  console.log('maxPriorityFeePerGas', maxPriorityFeePerGas);
   // if it requires parsing a signature, make sure to include it as a param
   if (requiresSignature) {
     cosnole.log("mint");
@@ -250,12 +258,8 @@ async function raid() {
       console.log(e);
     }
   }
-  try {
   console.log("halting");
   await halt(haltTime);
-  } catch(e){
-    console.log(e)
-  }
   }
 }
 
@@ -274,17 +278,13 @@ async function presetTime() {
   }
 
   const timestamp = await blockEstimatedTime(allowlist ? allowlistStartTime : publicSaleStartTime);
-  console.log("timestamp:", timestamp);
-
-  console.log("allowlist price:", allowlistPrice);
-  console.log("sale price:", salePrice);
-  console.log("estimated time:", estimatedTime);
-  console.log("allowlist time:", allowlistStartTime);
-  console.log("public sale time:", publicSaleStartTime);
+  const timeToMintInMS = timestamp - (spamMint * haltTime);
   console.log("now:", Date.now() / 1000);
+  console.log("will mint in", timeToMintInMS / 1000, "seconds");
+  console.log("price:", (allowlist ? allowlistPrice : salePrice) / 1e18, "avax");
   setTimeout(function () {
     raid();
-  }, timestamp - (spamMint * 1000));
+  }, timeToMintInMS);
 }
 
 /**
@@ -403,9 +403,9 @@ async function initializer() {
 const halt = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function blockEstimatedTime(time) {
-  const timestamp =
+  let timestamp =
         (await wsProvider.getBlock(await wsProvider.getBlockNumber())).timestamp * 1000;
-  (time * 1000) - (timestamp);
+  timestamp = (time * 1000) - (timestamp);
   return timestamp;
 }
 
