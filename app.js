@@ -40,7 +40,7 @@ let allowlistStartTime = Number.POSITIVE_INFINITY;
 let allowlistPrice = ethers.utils.parseEther("0.0");
 let salePrice = ethers.utils.parseEther("0.0"); // public sale price
 
-const amount = 5; // amount to mint per tx
+const amount = 1; // amount to mint per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js requires a set ownerWallet)
@@ -52,8 +52,8 @@ const ownerWallet = "0x";
  * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
  * @param haltTime Time to halt in miliseconds (1000 = 1 second)
  */
-let maxFeePerGas = ethers.utils.parseUnits("5000", "gwei");
-let maxPriorityFeePerGas = ethers.utils.parseUnits("4900", "gwei");
+let maxFeePerGas = ethers.utils.parseUnits("6500", "gwei");
+let maxPriorityFeePerGas = ethers.utils.parseUnits("5500", "gwei");
 const gasLimit = 300000;
 const haltTime = 1300;
 
@@ -80,18 +80,21 @@ const snowsight = false;
 
 const utilizedPrivateKeys = [
                             process.env.PRIVATE_KEY1, 
-                            // process.env.PRIVATE_KEY2, 
-                            // process.env.PRIVATE_KEY3,
-                            // process.env.PRIVATE_KEY4,
-                            // process.env.SA7,
-                            // process.env.SA12,
-                            // process.env.SA14,
-                            // process.env.SA20,
-                            // process.env.SA54,
-                            // process.env.SA59,
-                            // process.env.SA65,
-                            // process.env.SA84,
-                            // process.env.SA91,
+                            process.env.PRIVATE_KEY2, 
+                            process.env.PRIVATE_KEY3,
+                            process.env.PRIVATE_KEY4,
+                            process.env.SA3,
+                            process.env.SA7,
+                            process.env.SA12,
+                            process.env.SA14,
+                            process.env.SA20,
+                            process.env.SA36,
+                            process.env.SA54,
+                            process.env.SA59,
+                            process.env.SA60,
+                            process.env.SA65,
+                            process.env.SA84,
+                            process.env.SA91,
 ]
 
 // ██            ██    ▄    ██          ▀██   ██                    ▄    ██
@@ -232,16 +235,10 @@ async function raid() {
     gasLimit: gasLimit,
     nonce: nonce,
   };
-  console.log('nonce', nonce);
     // increment nonce for next mint
   nonce++;
-  maxFeePerGas = maxFeePerGas.mul(112).div(100);
-  console.log('maxFeePerGas', maxFeePerGas);
-  maxPriorityFeePerGas = maxPriorityFeePerGas.mul(112).div(100);
-  console.log('maxPriorityFeePerGas', maxPriorityFeePerGas);
   // if it requires parsing a signature, make sure to include it as a param
   if (requiresSignature) {
-    cosnole.log("mint");
     try {
       allowlist
         ? contract.connect(signer).allowlistMint(amount, parseSignature(signer.address), options)
@@ -278,9 +275,11 @@ async function presetTime() {
   }
 
   const timestamp = await blockEstimatedTime(allowlist ? allowlistStartTime : publicSaleStartTime);
-  const timeToMintInMS = timestamp - (spamMint * haltTime);
+  const timeToMintInMS = timestamp - ((spamMint + 2) * haltTime);
+  // const timeToMintInMS = timestamp;
   console.log("now:", Date.now() / 1000);
   console.log("will mint in", timeToMintInMS / 1000, "seconds");
+  console.log("timestamp to mint: ", (timeToMintInMS + Date.now()) / 1000)
   console.log("price:", (allowlist ? allowlistPrice : salePrice) / 1e18, "avax");
   setTimeout(function () {
     raid();
