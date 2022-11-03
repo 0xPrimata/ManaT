@@ -12,7 +12,7 @@
 //                              \▓▓▓▓▓▓
 
 const dotenv = require("dotenv").config();
-const { ethers } = require("ethers");
+const { ethers, providers } = require("ethers");
 const abi = require("./abi.json");
 const parseSignature = require("./utils/parseSignature.js");
 const fetchABI = require("./utils/fetchABI.js");
@@ -40,7 +40,7 @@ let allowlistStartTime = Number.POSITIVE_INFINITY;
 let allowlistPrice = ethers.utils.parseEther("0.0");
 let salePrice = ethers.utils.parseEther("0.0"); // public sale price
 
-const amount = 1; // amount to mint per tx
+const amount = 3; // amount to mint per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js requires a set ownerWallet)
@@ -52,8 +52,8 @@ const ownerWallet = "0x";
  * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
  * @param haltTime Time to halt in miliseconds (1000 = 1 second)
  */
-let maxFeePerGas = ethers.utils.parseUnits("6500", "gwei");
-let maxPriorityFeePerGas = ethers.utils.parseUnits("5500", "gwei");
+let maxFeePerGas = ethers.utils.parseUnits("3000", "gwei");
+let maxPriorityFeePerGas = ethers.utils.parseUnits("2005", "gwei");
 const gasLimit = 300000;
 const haltTime = 1300;
 
@@ -73,7 +73,7 @@ const avalanche = 1;
 const spamMint = 3;
 const abiFetch = false;
 const wsOnly = true;
-const allowlist = false;
+const allowlist = true;
 const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY1;
 const snowsight = false;
@@ -81,13 +81,19 @@ const snowsight = false;
 const utilizedPrivateKeys = [
                             process.env.PRIVATE_KEY1, 
                             process.env.PRIVATE_KEY2, 
-                            process.env.PRIVATE_KEY3,
-                            process.env.PRIVATE_KEY4,
-                            process.env.SA3,
+                            // process.env.PRIVATE_KEY3,
+                            // process.env.PRIVATE_KEY4,
+                            process.env.D1,
+                            process.env.D2,
+                            process.env.D3,
+                            // process.env.SA3,
+                            process.env.SA5,
                             process.env.SA7,
+                            process.env.SA9,
                             process.env.SA12,
                             process.env.SA14,
                             process.env.SA20,
+                            process.env.SA25,
                             process.env.SA36,
                             process.env.SA54,
                             process.env.SA59,
@@ -95,6 +101,7 @@ const utilizedPrivateKeys = [
                             process.env.SA65,
                             process.env.SA84,
                             process.env.SA91,
+                            process.env.SA921,
 ]
 
 // ██            ██    ▄    ██          ▀██   ██                    ▄    ██
@@ -171,15 +178,30 @@ async function snowSightMessage(privateKey) {
  * @param privateKeys Private keys to be used to mint
  */
 async function instantiateWallets(privateKeys) {
+  try {
+    allowlist ? 
+    allowlistPrice = (await httpContract.allowlistPrice()).mul(amount) :
+    salePrice = (await httpContract.salePrice()).mul(amount);
+  } catch (e) {
+    console.log(e);
+  }
+  await halt(1000);
   const promises = privateKeys.map(async (privateKey) => {
     let wallet;
     try {
       wallet = await initiateWallet(privateKey);
+      balance = await httpProvider.getBalance(wallet[0].address);
+      greater = balance.gt(allowlist ? allowlistPrice : salePrice);
     } catch (error) {
       console.log(error);
     }
-    wallets.push(wallet);
+    if (greater){
+      console.log('pushed', wallet[0].address);
+      wallets.push(wallet);
+    }
   });
+  await halt(1000);
+
   await Promise.all(promises);
 }
 
@@ -190,10 +212,8 @@ async function instantiateWallets(privateKeys) {
  */
 async function initiateWallet(privateKey) {
   let signer = [null, null];
-  signer[0] = new ethers.Wallet(privateKey, wsOnly ? wsProvider : httpProvider);
+  signer[0] = new ethers.Wallet(privateKey, httpProvider);
   signer[1] = await signer[0].getTransactionCount();
-  console.log("signer:", signer[0].address);
-  console.log("nonce:", signer[1]);
   return signer;
 }
 
@@ -266,10 +286,9 @@ async function raid() {
  */
 async function presetTime() {
   try {
-    allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber();
+    allowlist ?
+    allowlistStartTime = (await httpContract.allowlistStartTime()).toNumber() :
     publicSaleStartTime = (await httpContract.publicSaleStartTime()).toNumber();
-    allowlistPrice = (await httpContract.allowlistPrice()).mul(amount);
-    salePrice = (await httpContract.salePrice()).mul(amount);
   } catch (e) {
     console.log('e', e);
   }
