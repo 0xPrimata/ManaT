@@ -2,10 +2,10 @@ const ethers = require('ethers');
 const wallets = require("./.env.json");
 require("dotenv").config()
 
-const senderWalletPrivateKey = process.env.PRIVATE_KEY;
+const senderWalletPrivateKey = process.env.PRIVATE_KEY5;
 
 // make sure you consider gas
-const amountToTransfer = ethers.utils.formatUnits(ethers.BigNumber.from('1000000000000000000'), 'wei')
+const amountToTransfer = ethers.utils.formatUnits(ethers.BigNumber.from('10000000000000000'), 'wei')
 
 const mainnet = false;
 

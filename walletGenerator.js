@@ -2,7 +2,7 @@ const ethers = require('ethers');
 const crypto = require('crypto');
 const fs = require('fs');
 
-const walletAmount = 3;
+const walletAmount = 20;
 
 let wallets = []
 

@@ -9,6 +9,7 @@ const provider = new ethers.providers.JsonRpcProvider(avalanche ? process.env.HT
 transactions = [];
 
 for (let i = 0; wallets.length > i; i++){
+    provider.
     provider.getBalance(wallets[i].publicKey).then(balance => {
         console.log('balance', balance);
         provider.getFeeData().then(data => {

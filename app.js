@@ -32,15 +32,16 @@ const { checkResultErrors } = require("ethers/lib/utils");
 let targetBlockNumber = Number.POSITIVE_INFINITY;
 // blocktime is expressed in unix / 1000 https://www.epochconverter.com/
 // script sets target start time according to contract
-let publicSaleStartTime = Number.POSITIVE_INFINITY;
+let publicSaleStartTime = 0;
 let allowlistStartTime = Number.POSITIVE_INFINITY;
 
 // Price in ether. 1 ether = 10^18 wei
 // script sets price according to contract
 let allowlistPrice = ethers.utils.parseEther("0.0");
 let salePrice = ethers.utils.parseEther("0.0"); // public sale price
+let minGas = ethers.utils.parseEther("0.00");
 
-const amount = 3; // amount to mint per tx
+const amount = 1; // amount to mint per tx
 
 // If function depends on owner wallet to identify if certain tx
 // has been called (pendingTxListener.js requires a set ownerWallet)
@@ -52,8 +53,8 @@ const ownerWallet = "0x";
  * @param maxPriorityFeePerGas Max priority fee per gas is paid to miners
  * @param haltTime Time to halt in miliseconds (1000 = 1 second)
  */
-let maxFeePerGas = ethers.utils.parseUnits("3000", "gwei");
-let maxPriorityFeePerGas = ethers.utils.parseUnits("2005", "gwei");
+let maxFeePerGas = ethers.utils.parseUnits("300", "gwei");
+let maxPriorityFeePerGas = ethers.utils.parseUnits("50", "gwei");
 const gasLimit = 300000;
 const haltTime = 1300;
 
@@ -70,10 +71,10 @@ const haltTime = 1300;
  */
 const test = false;
 const avalanche = 1;
-const spamMint = 3;
+const spamMint = 1;
 const abiFetch = false;
 const wsOnly = true;
-const allowlist = true;
+const allowlist = false;
 const requiresSignature = false;
 const snowsightPK = process.env.PRIVATE_KEY1;
 const snowsight = false;
@@ -81,27 +82,33 @@ const snowsight = false;
 const utilizedPrivateKeys = [
                             process.env.PRIVATE_KEY1, 
                             process.env.PRIVATE_KEY2, 
-                            // process.env.PRIVATE_KEY3,
-                            // process.env.PRIVATE_KEY4,
+                            process.env.PRIVATE_KEY3,
+                            process.env.PRIVATE_KEY4,
                             process.env.D1,
                             process.env.D2,
                             process.env.D3,
-                            // process.env.SA3,
+                            process.env.D4,
+                            process.env.SA3,
                             process.env.SA5,
+                            process.env.SA6,
                             process.env.SA7,
+                            process.env.SA8,
                             process.env.SA9,
                             process.env.SA12,
                             process.env.SA14,
                             process.env.SA20,
                             process.env.SA25,
+                            process.env.SA31,
+                            process.env.SA35,
                             process.env.SA36,
+                            process.env.SA52,
                             process.env.SA54,
                             process.env.SA59,
                             process.env.SA60,
+                            process.env.SA62,
                             process.env.SA65,
                             process.env.SA84,
                             process.env.SA91,
-                            process.env.SA921,
 ]
 
 // ██            ██    ▄    ██          ▀██   ██                    ▄    ██
@@ -185,23 +192,22 @@ async function instantiateWallets(privateKeys) {
   } catch (e) {
     console.log(e);
   }
-  await halt(1000);
   const promises = privateKeys.map(async (privateKey) => {
     let wallet;
     try {
       wallet = await initiateWallet(privateKey);
       balance = await httpProvider.getBalance(wallet[0].address);
-      greater = balance.gt(allowlist ? allowlistPrice : salePrice);
+
+      let minBalance = (allowlist ? allowlistPrice : salePrice).add(minGas);
+      greater = balance.gt(minBalance);
     } catch (error) {
       console.log(error);
     }
     if (greater){
-      console.log('pushed', wallet[0].address);
+      console.log('✔️ ', wallet[0].address);
       wallets.push(wallet);
     }
   });
-  await halt(1000);
-
   await Promise.all(promises);
 }
 
@@ -226,6 +232,7 @@ async function raid() {
   if (!test) {
     let mints = wallets.map(async (wallet) => {
       mint(contract, wallet);
+      console.log(wallet);
     });
     await Promise.all(mints);
     console.log("mint ran successfully!");
@@ -247,7 +254,7 @@ async function raid() {
  async function mint(contract, wallet) {
   let [signer, nonce] = wallet;
   
-  for (i = 0; i <= spamMint; i++){
+  for (i = 0; i <= spamMint + 1; i++){
   let options = {
     maxFeePerGas: maxFeePerGas,
     maxPriorityFeePerGas: maxPriorityFeePerGas,
